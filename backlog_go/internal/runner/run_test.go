@@ -2403,6 +2403,61 @@ func TestRunShowTaskLongPrintsFullBody(t *testing.T) {
 	}
 }
 
+func TestRunShowTaskAllPrintsCompleteTaskFile(t *testing.T) {
+	t.Parallel()
+
+	root := setupWorkflowFixture(t)
+	taskPath := filepath.Join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo")
+	content := []string{
+		"---",
+		"id: P1.M1.E1.T001",
+		"title: a",
+		"status: pending",
+		"estimate_hours: 1",
+		"complexity: medium",
+		"priority: medium",
+		"depends_on: []",
+		"tags: []",
+		"---",
+		"line-01",
+		"line-02",
+		"line-03",
+		"line-04",
+		"line-05",
+		"line-06",
+		"line-07",
+		"line-08",
+		"line-09",
+		"line-10",
+		"line-11",
+		"line-12",
+		"line-13",
+	}
+	if err := os.WriteFile(taskPath, []byte(strings.Join(content, "\n")), 0o644); err != nil {
+		t.Fatalf("write task file: %v", err)
+	}
+
+	output, err := runInDir(t, root, "show", "P1.M1.E1.T001", "--all")
+	if err != nil {
+		t.Fatalf("run show --all = %v, expected nil", err)
+	}
+	if !strings.Contains(output, "Task File") {
+		t.Fatalf("show output = %q, expected task file output", output)
+	}
+	if !strings.Contains(output, "id: P1.M1.E1.T001") {
+		t.Fatalf("show output = %q, expected frontmatter id", output)
+	}
+	if !strings.Contains(output, "line-13") {
+		t.Fatalf("show output = %q, expected full body line-13", output)
+	}
+	if strings.Contains(output, "... (1 more lines)") {
+		t.Fatalf("show output = %q, unexpected preview truncation with --all", output)
+	}
+	if strings.Contains(output, "To view the full file, run: cat ") {
+		t.Fatalf("show output = %q, unexpected file preview hint with --all", output)
+	}
+}
+
 func TestRunShowTaskDisplaysExplicitDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -2872,7 +2927,7 @@ func TestRunShowHelpRendersCommandSpecificGuidance(t *testing.T) {
 		output,
 		"Command Help: backlog show",
 		"Usage:",
-		"backlog show [PATH_ID ...] [--long]",
+		"backlog show [PATH_ID ...] [--long] [--all]",
 	)
 }
 

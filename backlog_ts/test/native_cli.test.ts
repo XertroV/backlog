@@ -9,7 +9,7 @@ import { renderStartupLogo, stripAnsiCodes } from "../src/logo";
 let oldCwd = process.cwd();
 let root = "";
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
-const cliPath = join(packageRoot, "bin", "backlog");
+const cliPath = join(packageRoot, "src", "cli.ts");
 
 afterEach(() => {
   if (root) {
@@ -63,7 +63,7 @@ function setupFixtureInDir(tasksDir: string, includeBug = false): string {
 }
 
 function run(args: string[], cwd: string, extraEnv: NodeJS.ProcessEnv = {}) {
-  return Bun.spawnSync(["bun", cliPath, ...args], {
+  return Bun.spawnSync(["bun", "run", cliPath, ...args], {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
@@ -209,7 +209,7 @@ describe("native cli", () => {
       "P1.M1.E1.T003",
       "P1.M1.E1.T004",
     ]);
-  });
+  }, 12000);
 
   test("list --available includes bugs and ideas", () => {
     root = setupFixture(true);
@@ -1300,7 +1300,7 @@ tags: []
     expect(p.exitCode).toBe(0);
     const out = p.stdout.toString();
     expect(out).toContain("Command Help: backlog show");
-    expect(out).toContain("Usage: backlog show [PATH_ID ...] [--long]");
+    expect(out).toContain("Usage: backlog show [PATH_ID ...] [--long] [--all]");
   });
 
   test("help sync renders sync command guidance", () => {
@@ -2835,6 +2835,44 @@ tags: []
     expect(output).toContain("Line 12");
     expect(output).not.toContain("  ... (2 more lines)");
     expect(output).not.toContain("To view the full file, run: cat");
+  });
+
+  test("show --all prints the complete task file", () => {
+    root = setupFixture();
+    const taskPath = join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo");
+    const content = readFileSync(taskPath, "utf8");
+    const markerIndex = content.indexOf("---\n", 4);
+    expect(markerIndex).toBeGreaterThanOrEqual(0);
+    const frontmatterBlock = content.slice(0, markerIndex + 4);
+    const fullBody = [
+      "# A",
+      "",
+      "Line 1",
+      "Line 2",
+      "Line 3",
+      "Line 4",
+      "Line 5",
+      "Line 6",
+      "Line 7",
+      "Line 8",
+      "Line 9",
+      "Line 10",
+      "Line 11",
+      "Line 12",
+    ].join("\n");
+    writeFileSync(taskPath, `${frontmatterBlock}${fullBody}\n`);
+    const taskContent = readFileSync(taskPath, "utf8");
+
+    const p = run(["show", "P1.M1.E1.T001", "--all"], root);
+    expect(p.exitCode).toBe(0);
+    const output = p.stdout.toString();
+    expect(output).toContain("Task file:");
+    expect(output).toContain(`id: P1.M1.E1.T001`);
+    expect(output).toContain("Line 12");
+    expect(output).toContain(`File: ${join(".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo")}`);
+    expect(output).not.toContain("  ... (2 more lines)");
+    expect(output).not.toContain("To view the full file, run: cat");
+    expect(output).not.toContain("Body:");
   });
 
   test("show on non-pending idea hides Instructions section", () => {

@@ -307,9 +307,10 @@ var commandUsageFallbacks = map[string]commandUsageSpec{
 	},
 	"show": {
 		summary: "Show detailed information for one or more backlog IDs.",
-		usage:   "backlog show [PATH_ID ...] [--long]",
+		usage:   "backlog show [PATH_ID ...] [--long] [--all]",
 		options: []string{
 			"--long",
+			"--all",
 			"PATH_ID supports phase/milestone/epic/task IDs (for example P1, P1.M1, P1.M1.E1, P1.M1.E1.T001)",
 			"When omitted, falls back to current working task",
 		},
@@ -894,7 +895,12 @@ func Run(rawArgs ...string) error {
 	case commands.CmdList, commands.CmdLs:
 		return runList(command, payload)
 	case commands.CmdShow:
-		return runShow(payload, true, parseFlag(payload, "--long"))
+		return runShow(
+			payload,
+			true,
+			parseFlag(payload, "--long"),
+			parseFlag(payload, "--all"),
+		)
 	case commands.CmdGrab:
 		return runWithAutoCommit("grab", payload, runGrab)
 	case commands.CmdNext:
@@ -4092,15 +4098,21 @@ func warnMissingTaskFiles(tree models.TaskTree, dataDir string) {
 	fmt.Println()
 }
 
-func runShow(args []string, showNext bool, showLong bool) error {
+func runShow(args []string, showNext bool, showLong bool, showAll bool) error {
 	dataDir, err := ensureDataRoot()
 	if err != nil {
 		return err
 	}
-	if err := validateAllowedFlagsForUsage(commands.CmdShow, args, map[string]bool{"--long": true}); err != nil {
+	if err := validateAllowedFlagsForUsage(commands.CmdShow, args, map[string]bool{
+		"--long": true,
+		"--all":  true,
+	}); err != nil {
 		return err
 	}
-	ids := positionalArgs(args, map[string]bool{"--long": true})
+	ids := positionalArgs(args, map[string]bool{
+		"--long": true,
+		"--all":  true,
+	})
 	if len(ids) == 0 {
 		ctx, err := taskcontext.GetCurrentTask(dataDir)
 		if err != nil {
@@ -4140,7 +4152,7 @@ func runShow(args []string, showNext bool, showLong bool) error {
 			return fmt.Errorf("Invalid path format: %s", id)
 		}
 
-		if err := showScopedItem(tree, id, &scopePath, dataDir, showNext, showLong); err != nil {
+		if err := showScopedItem(tree, id, &scopePath, dataDir, showNext, showLong, showAll); err != nil {
 			return err
 		}
 	}
@@ -8161,6 +8173,7 @@ func showScopedItem(
 	dataDir string,
 	showNext bool,
 	showLong bool,
+	showAll bool,
 ) error {
 	calculator := critical_path.NewCriticalPathCalculator(tree, map[string]float64{})
 	availableTaskIDs := taskIDSet(calculator.FindAllAvailable())
@@ -8260,7 +8273,7 @@ func showScopedItem(
 		if task == nil {
 			return showNotFound(tree, "Task", id, scopeHint)
 		}
-		renderTaskDetail(*task, dataDir, showNext, showLong, tree)
+		renderTaskDetail(*task, dataDir, showNext, showLong, showAll, tree)
 		return nil
 	default:
 		return showNotFound(tree, "Task", id, scopeHint)
@@ -8540,7 +8553,7 @@ func renderTaskDependencySummary(task models.Task, tree models.TaskTree) bool {
 	return true
 }
 
-func renderTaskDetail(task models.Task, dataDir string, showNext bool, showLong bool, tree models.TaskTree) {
+func renderTaskDetail(task models.Task, dataDir string, showNext bool, showLong bool, showAll bool, tree models.TaskTree) {
 	fmt.Printf("%s: %s\n", styleSuccess("Task"), task.ID)
 	fmt.Printf("%s: %s\n", styleSubHeader("Title"), task.Title)
 	fmt.Printf("%s: %s\n", styleSubHeader("Status"), styleStatusText(string(task.Status)))
@@ -8577,20 +8590,30 @@ func renderTaskDetail(task models.Task, dataDir string, showNext bool, showLong 
 	if err == nil {
 		printTodoFileWarnings(warnings)
 		if !missing {
-			body = strings.TrimSpace(body)
-			if body != "" {
-				lines := strings.Split(body, "\n")
-				fmt.Printf("%s\n", styleSubHeader("Preview"))
-				limit := len(lines)
-				if !showLong {
-					limit = min(taskFileReadPreviewLines, len(lines))
+			if showAll {
+				raw, rawErr := os.ReadFile(filePath)
+				fmt.Printf("%s\n", styleSubHeader("Task File"))
+				if rawErr == nil {
+					fmt.Printf("%s", string(raw))
+				} else {
+					fmt.Printf("  %s\n", styleWarning(fmt.Sprintf("Could not read full file: %s", rawErr)))
 				}
-				for i := 0; i < limit; i++ {
-					fmt.Printf("  %s\n", lines[i])
-				}
-				if !showLong && len(lines) > limit {
-					fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("... (%d more lines)", len(lines)-limit)))
-					fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("To view the full file, run: cat %s", filePath)))
+			} else {
+				body = strings.TrimSpace(body)
+				if body != "" {
+					lines := strings.Split(body, "\n")
+					fmt.Printf("%s\n", styleSubHeader("Preview"))
+					limit := len(lines)
+					if !showLong {
+						limit = min(taskFileReadPreviewLines, len(lines))
+					}
+					for i := 0; i < limit; i++ {
+						fmt.Printf("  %s\n", lines[i])
+					}
+					if !showLong && len(lines) > limit {
+						fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("... (%d more lines)", len(lines)-limit)))
+						fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("To view the full file, run: cat %s", filePath)))
+					}
 				}
 			}
 		}
@@ -8758,7 +8781,7 @@ func runClaim(args []string, metadata *gitAutoCommitMetadata) error {
 		}
 		fmt.Println(styleWarning("Warning: claim only works with task IDs."))
 		fmt.Printf("Showing `backlog show %s` for context.\n", id)
-		if err := runShow([]string{id}, false, false); err != nil {
+		if err := runShow([]string{id}, false, false, false); err != nil {
 			return err
 		}
 	}
@@ -8801,7 +8824,7 @@ func runEdit(args []string, metadata *gitAutoCommitMetadata) error {
 	if task == nil {
 		fmt.Println(styleWarning("Warning: edit only works with task IDs."))
 		fmt.Printf("Showing `backlog show %s` for context.\n", taskID)
-		if err := runShow([]string{taskID}, false, false); err != nil {
+		if err := runShow([]string{taskID}, false, false, false); err != nil {
 			return err
 		}
 		return nil

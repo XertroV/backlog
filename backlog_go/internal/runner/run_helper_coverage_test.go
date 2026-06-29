@@ -364,13 +364,13 @@ func TestRunGrabModesAndScope(t *testing.T) {
 
 	rootSingle := setupWorkflowFixture(t)
 	singleOut := mustRun(t, rootSingle, "grab", "--single")
-		assertContainsAll(
-			t,
-			singleOut,
-			"Grabbed: P1.M1.E1.T001 - a",
-			"it only claims one task at a time",
-			"Consider dropping `--single`",
-		)
+	assertContainsAll(
+		t,
+		singleOut,
+		"Grabbed: P1.M1.E1.T001 - a",
+		"it only claims one task at a time",
+		"Consider dropping `--single`",
+	)
 
 	rootScope := setupWorkflowFixture(t)
 	_, err = runInDir(t, rootScope, "grab", "--scope", "P9")
@@ -481,7 +481,7 @@ func TestShowScopedItemBranches(t *testing.T) {
 	dataDir := filepath.Join(root, ".tasks")
 	phasePath := models.ForPhase("P1")
 	phaseOut := captureStdout(t, func() {
-			if err := showScopedItem(tree, "P1", &phasePath, dataDir, true, false); err != nil {
+		if err := showScopedItem(tree, "P1", &phasePath, dataDir, true, false, false); err != nil {
 			t.Fatalf("showScopedItem(phase) = %v", err)
 		}
 	})
@@ -491,7 +491,7 @@ func TestShowScopedItemBranches(t *testing.T) {
 
 	milestonePath, _ := models.ParseTaskPath("P1.M1")
 	milestoneOut := captureStdout(t, func() {
-		if err := showScopedItem(tree, "P1.M1", &milestonePath, dataDir, true, false); err != nil {
+		if err := showScopedItem(tree, "P1.M1", &milestonePath, dataDir, true, false, false); err != nil {
 			t.Fatalf("showScopedItem(milestone) = %v", err)
 		}
 	})
@@ -501,7 +501,7 @@ func TestShowScopedItemBranches(t *testing.T) {
 
 	epicPath, _ := models.ParseTaskPath("P1.M1.E1")
 	epicOut := captureStdout(t, func() {
-		if err := showScopedItem(tree, "P1.M1.E1", &epicPath, dataDir, true, false); err != nil {
+		if err := showScopedItem(tree, "P1.M1.E1", &epicPath, dataDir, true, false, false); err != nil {
 			t.Fatalf("showScopedItem(epic) = %v", err)
 		}
 	})
@@ -511,7 +511,7 @@ func TestShowScopedItemBranches(t *testing.T) {
 
 	taskPath, _ := models.ParseTaskPath("P1.M1.E1.T001")
 	taskOut := captureStdout(t, func() {
-		if err := showScopedItem(tree, "P1.M1.E1.T001", &taskPath, dataDir, true, false); err != nil {
+		if err := showScopedItem(tree, "P1.M1.E1.T001", &taskPath, dataDir, true, false, false); err != nil {
 			t.Fatalf("showScopedItem(task) = %v", err)
 		}
 	})
@@ -521,7 +521,7 @@ func TestShowScopedItemBranches(t *testing.T) {
 
 	missingPath := models.ForPhase("P9")
 	missingOut := captureStdout(t, func() {
-		err := showScopedItem(tree, "P9", &missingPath, dataDir, true, false)
+		err := showScopedItem(tree, "P9", &missingPath, dataDir, true, false, false)
 		if err == nil {
 			t.Fatal("showScopedItem missing phase expected error")
 		}

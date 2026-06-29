@@ -655,7 +655,12 @@ const commandHelpSpecs: Record<string, CommandHelpSpec> = {
   search: { summary: "Search tasks by pattern.", usage: "backlog search <PATTERN> [options]", options: ["--status", "--tags", "--complexity", "--priority", "--limit", "--json"], examples: ["backlog search auth", "backlog search --status pending --limit 5 auth"] },
   session: { summary: "Manage agent sessions.", usage: "backlog session <start|heartbeat|list|end|clean> [--agent AGENT] [--timeout MINUTES]", options: ["start", "heartbeat", "list", "end", "clean"], examples: ["backlog session start --agent agent-a", "backlog session list"] },
   set: { summary: "Set task properties (status/priority/etc).", usage: "backlog set <TASK_ID> [property flags]", options: ["--status", "--priority", "--complexity", "--estimate", "--title", "--depends-on", "--tags", "--reason", "--body, -b", "--append-body"], examples: ["backlog set P1.M1.E1.T001 --priority high --tags api,auth", "backlog set P1.M1.E1.T001 --body \"seed\" --append-body"] },
-  show: { summary: "Show detailed info for task/phase/milestone/epic.", usage: "backlog show [PATH_ID ...] [--long]", options: ["--long"], examples: ["backlog show P1.M1.E1.T001", "backlog show P1.M1 P2.M1.E3", "backlog show", "backlog show P1.M1.E1.T001 --long"] },
+  show: {
+    summary: "Show detailed info for task/phase/milestone/epic.",
+    usage: "backlog show [PATH_ID ...] [--long] [--all]",
+    options: ["--long", "--all"],
+    examples: ["backlog show P1.M1.E1.T001", "backlog show P1.M1 P2.M1.E3", "backlog show", "backlog show P1.M1.E1.T001 --long", "backlog show P1.M1.E1.T001 --all"],
+  },
   skills: { summary: "Install skill files.", usage: "backlog skills install <SKILL> [--client codex|claude] [--artifact skills|commands] [--dry-run] [--json]", options: ["--client", "--artifact", "--dry-run", "--json"], examples: ["backlog skills install plan-task --client=codex --artifact=skills"] },
   skip: { summary: "Skip current task and move on.", usage: "backlog skip <TASK_ID> [--agent AGENT] [--no-grab]", options: ["--agent", "--no-grab"], examples: ["backlog skip P1.M1.E1.T001 --agent agent-a"] },
   sync: { summary: "Sync derived metadata in index files.", usage: "backlog sync", options: [], examples: ["backlog sync"] },
@@ -2014,9 +2019,10 @@ async function cmdPreview(args: string[]): Promise<void> {
 
 async function cmdShow(args: string[]): Promise<void> {
   const showLong = parseFlag(args, "--long");
+  const showAll = parseFlag(args, "--all");
   const ids = positionalArgsForCommand(
     args,
-    { "--long": "boolean" },
+    { "--long": "boolean", "--all": "boolean" },
     "show",
   );
   const loader = new TaskLoader();
@@ -2107,6 +2113,19 @@ async function cmdShow(args: string[]): Promise<void> {
     if (isMissing) {
       continue;
     }
+    if (showAll) {
+      console.log(pc.bold("Task file:"));
+      if (taskFilePathData !== null) {
+        const fullTaskFileText = taskFilePathData.replace(/\r?\n$/, "");
+        for (const line of fullTaskFileText.split(/\r?\n/)) {
+          console.log(`  ${line}`);
+        }
+      } else {
+        console.log(pc.dim(`  Missing task file: ${taskFile}`));
+      }
+      continue;
+    }
+
     const bodyLines = body.trim().split("\n");
     if (bodyLines.length > 0 && bodyLines[0] !== "") {
       console.log(pc.bold("Body:"));

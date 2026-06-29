@@ -2155,9 +2155,10 @@ def tree(output_json, unfinished, show_completed_aux, details, depth, path_queri
 
 
 @cli.command()
+@click.option("--all", "show_all", is_flag=True, help="Show the full .todo file (frontmatter and body).")
 @click.option("--long", "show_long", is_flag=True, help="Show the entire task file body.")
 @click.argument("path_ids", nargs=-1)
-def show(path_ids, show_long):
+def show(path_ids, show_long, show_all):
     """Show detailed information for phases, milestones, epics, or tasks.
 
     PATH_IDS can be one or more IDs like P1, P1.M01, P1.M01.E1, P1.M01.E1.T001.
@@ -2278,7 +2279,7 @@ def show(path_ids, show_long):
                 task = scope_tree.find_task(path_id)
                 if not task:
                     show_not_found("Task", path_id, parent)
-                _show_task(scope_tree, path_id, show_long)
+                _show_task(scope_tree, path_id, show_long, show_all)
 
     except ValueError as e:
         console.print(f"[red]Error:[/] {str(e)}")
@@ -2425,7 +2426,7 @@ def _show_epic(tree, epic_id):
     console.print()
 
 
-def _show_task(tree, task_id, show_long=False):
+def _show_task(tree, task_id, show_long=False, show_all=False):
     """Display task details."""
     task = tree.find_task(task_id)
     if not task:
@@ -2466,18 +2467,23 @@ def _show_task(tree, task_id, show_long=False):
     else:
         body = content
     lines = body.strip().splitlines()
+    if show_all:
+        console.print("[bold]Task file:[/]")
+        for line in content.splitlines():
+            console.print(f"  {line}")
+        return
     if lines:
         console.print("[bold]Body:[/]")
-        if show_long:
-            for line in lines:
-                console.print(f"  {line}")
-        else:
-            preview_count = min(SHOW_TASK_PREVIEW_LINES, len(lines))
-            for line in lines[:preview_count]:
-                console.print(f"  {line}")
-            if len(lines) > preview_count:
-                console.print(f"[dim]  ... ({len(lines) - preview_count} more lines)[/]")
-                console.print(f"[dim]To view the full file, run: cat {task_file}[/]")
+    if show_long:
+        for line in lines:
+            console.print(f"  {line}")
+    else:
+        preview_count = min(SHOW_TASK_PREVIEW_LINES, len(lines))
+        for line in lines[:preview_count]:
+            console.print(f"  {line}")
+        if len(lines) > preview_count:
+            console.print(f"[dim]  ... ({len(lines) - preview_count} more lines)[/]")
+            console.print(f"[dim]To view the full file, run: cat {task_file}[/]")
 
 
 def _show_idea_instructions(idea):

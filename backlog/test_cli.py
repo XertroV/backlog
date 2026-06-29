@@ -2935,6 +2935,25 @@ def test_show_task_long_prints_entire_body(runner, tmp_tasks_dir):
     assert "To view the full file, run: cat" not in result.output
 
 
+def test_show_task_all_prints_entire_task_file(runner, tmp_tasks_dir):
+    """show --all should print the complete .todo file including frontmatter."""
+    task_file = create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Test Task")
+
+    result = runner.invoke(cli, ["show", "P1.M1.E1.T001", "--all"])
+    assert result.exit_code == 0
+    file_contents = task_file.read_text()
+    assert (
+        f"File stats: {task_file.stat().st_size} bytes, {len(file_contents.splitlines())} lines"
+        in result.output
+    )
+    assert "Task file:" in result.output
+    assert "id: P1.M1.E1.T001" in result.output
+    assert "# Test Task" in result.output
+    assert "- Acceptance criterion 2" in result.output
+    assert "... (2 more lines)" not in result.output
+    assert "To view the full file, run: cat" not in result.output
+
+
 def test_show_task_displays_explicit_dependencies(runner, tmp_tasks_dir):
     """show should label explicit dependencies in task output."""
     create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Setup task", status="done")
