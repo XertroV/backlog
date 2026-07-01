@@ -860,6 +860,19 @@ class TestListCommand:
         assert "task dependency cycle detected" in normalized
         assert "P1.M1.E1.T001 -> P1.M1.E1.T002 -> P1.M1.E1.T001" in normalized
 
+    def test_list_available_displays_claim_hint(self, runner, tmp_tasks_dir):
+        create_task_file(
+            tmp_tasks_dir,
+            "P1.M1.E1.T001",
+            "Auto-claim-ready task",
+        )
+
+        result = runner.invoke(cli, ["list", "--available"])
+
+        assert result.exit_code == 0
+        assert "Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim" in result.output
+        assert "the best available task." in result.output
+
     def test_list_warns_but_succeeds_on_hierarchy_cycle(
         self, runner, tmp_tasks_dir_hierarchy_cycle
     ):

@@ -1536,7 +1536,10 @@ def _list_available(
             crit_marker = "[yellow]★[/] " if task.id in critical_path else "  "
             console.print(f"  {crit_marker}[bold]{task.id}:[/] {task.title}")
 
-    console.print(f"\n[dim]★ = On critical path[/]\n")
+    console.print(f"\n[dim]★ = On critical path[/]")
+    console.print(
+        "[dim]Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task.[/]"
+    )
 
 
 def _list_json(

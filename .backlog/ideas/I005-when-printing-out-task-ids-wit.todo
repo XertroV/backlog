@@ -1,13 +1,15 @@
 ---
+claimed_at: "2026-07-01T05:51:21Z"
+claimed_by: cli-user
+completed_at: null
 complexity: medium
 depends_on: []
 estimate_hours: 10
 id: I005
 priority: medium
-status: pending
-tags:
-    - idea
-    - planning
+started_at: "2026-07-01T05:51:21Z"
+status: in_progress
+tags: []
 title: when printing out task ids with random hex numbering to a user's terminal, we should color the prefix of each part of the task id that is required for uniqueness so that we can easily point to it uniquely while typing it in manually.
 ---
 

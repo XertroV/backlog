@@ -28,5 +28,12 @@ ideas:
       status: in_progress
       tags: []
       title: warn when an invalid file is detected. show and claim should do validity checks on the file and print any warnings encountered (eg a file can be valid for claiming but isn't in the index).
-    - file: I005-when-printing-out-task-ids-wit.todo
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 10
+      file: I005-when-printing-out-task-ids-wit.todo
       id: I005
+      priority: medium
+      status: in_progress
+      tags: []
+      title: when printing out task ids with random hex numbering to a user's terminal, we should color the prefix of each part of the task id that is required for uniqueness so that we can easily point to it uniquely while typing it in manually.

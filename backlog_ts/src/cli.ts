@@ -1224,6 +1224,8 @@ function listAvailable(
       console.log(`  ${prefix}${critMarker}${idea.id}: ${idea.title}`);
     }
   }
+
+  console.log("Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task.");
 }
 
 async function cmdList(args: string[]): Promise<void> {

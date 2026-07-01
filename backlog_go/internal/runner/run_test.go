@@ -4726,7 +4726,13 @@ func TestRunListAvailableTextRendersHeaderAndLegend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run list --available = %v, expected nil", err)
 	}
-	assertContainsAll(t, output, "Available Tasks (", "Legend:", "Use `backlog grab`")
+	assertContainsAll(
+		t,
+		output,
+		"Available Tasks (",
+		"Legend:",
+		"Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task.",
+	)
 }
 
 func TestRunReportVelocityAndEstimateAccuracyJSONContracts(t *testing.T) {

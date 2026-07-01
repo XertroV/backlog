@@ -258,6 +258,9 @@ describe("native cli", () => {
     const output = list.stdout.toString();
     expect(output).toContain("B001: Critical Bug");
     expect(output).toContain("I001: capture planning intake");
+    expect(output).toContain(
+      "Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task.",
+    );
   });
 
   test("list hides completed bugs by default and can include via flag", () => {

@@ -7987,7 +7987,7 @@ func renderListAvailable(tree models.TaskTree, calculator *critical_path.Critica
 		}
 		fmt.Println("")
 	}
-	fmt.Printf("%s\n", styleMuted("Use `backlog grab` to auto-claim the best available task."))
+	fmt.Printf("%s\n", styleMuted("Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task."))
 	return nil
 }
 
