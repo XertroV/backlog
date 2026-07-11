@@ -54,16 +54,71 @@ KNOWN_COMMANDS = [
     "migrate",
 ]
 
+BACKLOG_AGENTS_BOOTSTRAP = """# AGENTS.md
+
+## Agent workflow
+
+- Always use `bl` to create and modify backlog tasks.
+- Use `bl --help` before acting if you need command-level guidance.
+- Run `bl howto` to review workflow expectations.
+"""
+
+
+def _ensure_backlog_agents(data_dir: Path) -> None:
+    """Ensure .backlog/AGENTS.md and .backlog/CLAUDE.md exist with the expected contents."""
+    if not data_dir.exists():
+        return
+
+    agents_path = data_dir / "AGENTS.md"
+    if not agents_path.exists():
+        agents_path.write_text(BACKLOG_AGENTS_BOOTSTRAP)
+
+    claude_path = data_dir / "CLAUDE.md"
+    needs_link = True
+    if claude_path.exists():
+        if claude_path.is_symlink():
+            try:
+                needs_link = claude_path.resolve() != agents_path.resolve()
+            except OSError:
+                needs_link = True
+        else:
+            needs_link = True
+
+    if needs_link:
+        if claude_path.exists() or claude_path.is_symlink():
+            if claude_path.is_dir() and not claude_path.is_symlink():
+                shutil.rmtree(claude_path)
+            else:
+                claude_path.unlink()
+        os.symlink("AGENTS.md", claude_path)
+
 
 def get_data_dir() -> Path:
-    """Get the data directory path, preferring .backlog over .tasks."""
-    backlog_path = Path(BACKLOG_DIR)
-    tasks_path = Path(TASKS_DIR)
+    """Get the data directory path, preferring .backlog over .tasks.
 
-    if backlog_path.exists():
-        return backlog_path
-    if tasks_path.exists():
-        return tasks_path
+    Searches up parent directories to support running from nested folders.
+    """
+    current = Path.cwd()
+    first_tasks = None
+    while True:
+        backlog_path = current / BACKLOG_DIR
+        if backlog_path.exists():
+            _ensure_backlog_agents(backlog_path)
+            return backlog_path
+
+        if first_tasks is None:
+            tasks_path = current / TASKS_DIR
+            if tasks_path.exists():
+                first_tasks = tasks_path
+
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    if first_tasks is not None:
+        return first_tasks
+
     raise FileNotFoundError(
         f"No data directory found. Expected {BACKLOG_DIR}/ or {TASKS_DIR}/"
     )
@@ -152,6 +207,10 @@ def migrate_data_dir(
 
     if backlog_path.exists():
         if is_symlink_to(tasks_path, backlog_path):
+            try:
+                _ensure_backlog_agents(backlog_path)
+            except OSError as exc:
+                return False, f"Failed to initialize AGENTS files: {exc}"
             return True, "Already migrated (.tasks is symlink to .backlog)"
         if tasks_path.exists() and not tasks_path.is_symlink():
             if not force:
@@ -159,7 +218,15 @@ def migrate_data_dir(
                     False,
                     "Both .tasks/ and .backlog/ exist. Use --force to proceed.",
                 )
+            try:
+                _ensure_backlog_agents(backlog_path)
+            except OSError as exc:
+                return False, f"Failed to initialize AGENTS files: {exc}"
             return True, "Both directories exist (force mode - using .backlog/)"
+        try:
+            _ensure_backlog_agents(backlog_path)
+        except OSError as exc:
+            return False, f"Failed to initialize AGENTS files: {exc}"
         return True, "Already migrated (.backlog/ exists)"
 
     if not tasks_path.exists():
@@ -188,6 +255,11 @@ def migrate_data_dir(
         if md_file.is_file() and md_file.name not in ["README.md", "PARITY_DIFFS.md"]:
             if update_md_file(md_file):
                 updated_files.append(md_file.name)
+
+    try:
+        _ensure_backlog_agents(backlog_path)
+    except OSError as exc:
+        return False, f"Failed to initialize AGENTS files: {exc}"
 
     msg = f"Migrated .tasks/ → .backlog/"
     if create_symlink:

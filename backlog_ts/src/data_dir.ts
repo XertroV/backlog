@@ -1,4 +1,13 @@
-import { existsSync, lstatSync, readFileSync, symlinkSync, renameSync, writeFileSync } from "node:fs";
+import { 
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readlinkSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { stdout, stdin } from "node:process";
 
@@ -6,6 +15,7 @@ export const BACKLOG_DIR = ".backlog";
 export const TASKS_DIR = ".tasks";
 
 export const MIGRATION_COMMENT = "<!-- CLI migrated: 'tasks' → 'backlog' (alias 'bl' also works). -->\n";
+export const BACKLOG_AGENTS_BOOTSTRAP = `# AGENTS.md\n\n## Agent workflow\n\n- Always use \`bl\` to create and modify backlog tasks.\n- Use \`bl --help\` before acting if you need command-level guidance.\n- Run \`bl howto\` to review workflow expectations.\n`;
 
 export const KNOWN_COMMANDS = [
   "list", "ls", "show", "cat", "next", "claim", "grab", "done", "cycle", "work", "update", "sync", "check",
@@ -16,12 +26,32 @@ export const KNOWN_COMMANDS = [
 ];
 
 export function getDataDir(): string {
-  if (existsSync(BACKLOG_DIR)) {
-    return BACKLOG_DIR;
+  let current = resolve(process.cwd());
+  let firstTasksDir: string | null = null;
+
+  while (true) {
+    const backlogPath = join(current, BACKLOG_DIR);
+    if (existsSync(backlogPath)) {
+      ensureBacklogAgents(backlogPath);
+      return backlogPath;
+    }
+
+    if (firstTasksDir === null) {
+      const tasksPath = join(current, TASKS_DIR);
+      if (existsSync(tasksPath)) {
+        firstTasksDir = tasksPath;
+      }
+    }
+
+    const parent = resolve(current, "..");
+    if (parent === current) break;
+    current = parent;
   }
-  if (existsSync(TASKS_DIR)) {
-    return TASKS_DIR;
+
+  if (firstTasksDir !== null) {
+    return firstTasksDir;
   }
+
   throw new Error(`No data directory found. Expected ${BACKLOG_DIR}/ or ${TASKS_DIR}/`);
 }
 
@@ -36,10 +66,26 @@ export function needsMigration(): boolean {
 export function isSymlinkTo(path: string, target: string): boolean {
   try {
     if (!lstatSync(path).isSymbolicLink()) return false;
-    return resolve(join(path, "..", readFileSync(path, "utf8").trim())) === resolve(target);
+    const linkTarget = readlinkSync(path);
+    if (linkTarget === target) return true;
+    return resolve(join(path, "..", linkTarget)) === resolve(target);
   } catch {
     return false;
   }
+}
+
+export function ensureBacklogAgents(backlogDir: string): void {
+  const agentsPath = join(backlogDir, "AGENTS.md");
+  if (!existsSync(agentsPath)) {
+    writeFileSync(agentsPath, BACKLOG_AGENTS_BOOTSTRAP);
+  }
+
+  const claudePath = join(backlogDir, "CLAUDE.md");
+  if (isSymlinkTo(claudePath, agentsPath)) {
+    return;
+  }
+  rmSync(claudePath, { force: true, recursive: true });
+  symlinkSync("AGENTS.md", claudePath);
 }
 
 export function isInteractive(): boolean {
@@ -96,13 +142,28 @@ export interface MigrationResult {
 export function migrateDataDir(createSymlink = true, force = false): MigrationResult {
   if (existsSync(BACKLOG_DIR)) {
     if (isSymlinkTo(TASKS_DIR, BACKLOG_DIR)) {
+      try {
+        ensureBacklogAgents(BACKLOG_DIR);
+      } catch (e) {
+        return { success: false, message: `Failed to initialize AGENTS files: ${e}` };
+      }
       return { success: true, message: "Already migrated (.tasks is symlink to .backlog)" };
     }
     if (existsSync(TASKS_DIR) && !lstatSync(TASKS_DIR).isSymbolicLink()) {
       if (!force) {
         return { success: false, message: "Both .tasks/ and .backlog/ exist. Use --force to proceed." };
       }
+      try {
+        ensureBacklogAgents(BACKLOG_DIR);
+      } catch (e) {
+        return { success: false, message: `Failed to initialize AGENTS files: ${e}` };
+      }
       return { success: true, message: "Both directories exist (force mode - using .backlog/)" };
+    }
+    try {
+      ensureBacklogAgents(BACKLOG_DIR);
+    } catch (e) {
+      return { success: false, message: `Failed to initialize AGENTS files: ${e}` };
     }
     return { success: true, message: "Already migrated (.backlog/ exists)" };
   }
@@ -134,6 +195,12 @@ export function migrateDataDir(createSymlink = true, force = false): MigrationRe
         updatedFiles.push(mdFile);
       }
     }
+  }
+
+  try {
+    ensureBacklogAgents(BACKLOG_DIR);
+  } catch (e) {
+    return { success: false, message: `Failed to initialize AGENTS files: ${e}` };
   }
   
   let msg = "Migrated .tasks/ → .backlog/";

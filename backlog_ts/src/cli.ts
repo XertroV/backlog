@@ -49,7 +49,7 @@ import {
 import { claimTask, completeTask, StatusError, updateStatus } from "./status";
 import { utcNow } from "./time";
 import { runChecks } from "./check";
-import { BACKLOG_DIR, getDataDirName } from "./data_dir";
+import { BACKLOG_DIR, ensureBacklogAgents, getDataDirName } from "./data_dir";
 import { logoShouldUseColor, renderStartupLogo, startupLogoWidth } from "./logo";
 import {
   BACKLOG_HOWTO_SKILL_MD,
@@ -4435,6 +4435,7 @@ async function cmdInit(args: string[]): Promise<void> {
     timeline_weeks: timelineWeeks,
     phases: [],
   });
+  ensureBacklogAgents(BACKLOG_DIR);
   console.log(`Initialized project "${project}" in ${BACKLOG_DIR}/`);
 }
 

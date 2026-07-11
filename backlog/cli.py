@@ -679,6 +679,8 @@ def benchmark(output_json, top, mode, parse_task_body):
 @click.option("--timeline-weeks", "-w", default=0, type=int, help="Timeline in weeks")
 def init(project, description, timeline_weeks):
     """Initialize a new .backlog project."""
+    from .data_dir import _ensure_backlog_agents
+
     index_path = Path(".backlog/index.yaml")
     if index_path.exists():
         raise click.ClickException("Already initialized (.backlog/index.yaml exists)")
@@ -692,6 +694,7 @@ def init(project, description, timeline_weeks):
     }
     with open(index_path, "w") as f:
         yaml.dump(data, f, default_flow_style=False)
+    _ensure_backlog_agents(Path(".backlog"))
     click.echo(f'Initialized project "{project}" in .backlog/')
 
 
@@ -4141,9 +4144,11 @@ def bug(
 @click.option("--no-symlink", is_flag=True, help="Skip creating .tasks symlink")
 def migrate(force, no_symlink):
     """Migrate .tasks/ directory to .backlog/."""
-    from .data_dir import migrate_data_dir
+    from .data_dir import _ensure_backlog_agents, migrate_data_dir
 
     success, message = migrate_data_dir(create_symlink=not no_symlink, force=force)
+    if success and Path(".backlog").exists():
+        _ensure_backlog_agents(Path(".backlog"))
 
     if success:
         console.print(f"[green]✓ {message}[/]")

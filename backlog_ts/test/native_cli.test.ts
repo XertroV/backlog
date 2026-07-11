@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse, stringify } from "yaml";
 import { renderStartupLogo, stripAnsiCodes } from "../src/logo";
@@ -151,6 +161,20 @@ function gitCommitCount(cwd: string): number {
     throw new Error("git rev-list --count HEAD did not return a number");
   }
   return count;
+}
+
+function assertBacklogAgentsBootstrap(backlogDir: string): void {
+  const agentsPath = join(backlogDir, "AGENTS.md");
+  const agents = readFileSync(agentsPath, "utf8");
+  expect(agents).toContain("Always use `bl` to create and modify backlog tasks.");
+  expect(agents).toContain("`bl --help`");
+  expect(agents).toContain("`bl howto`");
+
+  const claudePath = join(backlogDir, "CLAUDE.md");
+  expect(lstatSync(claudePath).isSymbolicLink()).toBeTrue();
+  const target = readlinkSync(claudePath);
+  if (target === "AGENTS.md") return;
+  expect(resolve(dirname(claudePath), target)).toBe(resolve(agentsPath));
 }
 
 describe("native cli", () => {
@@ -1157,6 +1181,43 @@ describe("native cli", () => {
     const p = run(["check"], root);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("Consistency check passed");
+  });
+
+  test("init creates .backlog AGENTS.md and CLAUDE.md symlink", () => {
+    root = setupFixture();
+    const p = run(["init", "--project", "TypeScript CLI", "--description", "Bootstrap checks"], root);
+    expect(p.exitCode).toBe(0);
+
+    assertBacklogAgentsBootstrap(join(root, ".backlog"));
+  });
+
+  test("migrate creates .backlog AGENTS bootstrap and CLAUDE symlink", () => {
+    root = setupFixture();
+    const p = run(["migrate", "--no-symlink"], root);
+    expect(p.exitCode).toBe(0);
+    expect(p.stdout.toString()).toContain("Migrated .tasks/ -> .backlog/");
+
+    expect(existsSync(join(root, ".backlog", "index.yaml"))).toBeTrue();
+    expect(existsSync(join(root, ".tasks"))).toBeFalse();
+    assertBacklogAgentsBootstrap(join(root, ".backlog"));
+  });
+
+  test("running from nested directory repairs missing .backlog AGENTS bootstrap files", () => {
+    root = setupFixture();
+    const migrate = run(["migrate", "--no-symlink"], root);
+    expect(migrate.exitCode).toBe(0);
+
+    rmSync(join(root, ".backlog", "AGENTS.md"), { force: true });
+    rmSync(join(root, ".backlog", "CLAUDE.md"), { force: true });
+
+    const nested = join(root, "nested", "deep");
+    mkdirSync(nested, { recursive: true });
+
+    const show = run(["show", "P1.M1.E1.T001"], nested);
+    expect(show.exitCode).toBe(0);
+    expect(show.stdout.toString()).toContain("P1.M1.E1.T001");
+
+    assertBacklogAgentsBootstrap(join(root, ".backlog"));
   });
 
   test("check accepts task dependencies on existing epic", () => {

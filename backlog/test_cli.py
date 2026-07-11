@@ -452,6 +452,21 @@ def git_commit_count(tasks_dir):
         raise AssertionError(f"invalid git commit count output: {run_git(tasks_dir, 'rev-list', '--count', 'HEAD')}") from exc
 
 
+def assert_backlog_bootstrap_files(backlog_dir):
+    agents_path = Path(backlog_dir) / "AGENTS.md"
+    agents = agents_path.read_text()
+    assert "Always use `bl` to create and modify backlog tasks." in agents
+    assert "`bl --help`" in agents
+    assert "`bl howto`" in agents
+
+    claude_path = Path(backlog_dir) / "CLAUDE.md"
+    assert claude_path.is_symlink()
+    claude_target = os.readlink(claude_path)
+    if claude_target == "AGENTS.md":
+        return
+    assert (claude_path.parent / claude_target).resolve() == agents_path.resolve()
+
+
 class TestClaimCommand:
     """Tests for the claim command."""
 
@@ -3517,3 +3532,46 @@ def test_benchmark_command_reports_summary(runner, tmp_tasks_dir):
     assert "Task frontmatter parse time" in text_result.output
     assert "Task body parse time" in text_result.output
     assert "Parse mode" in text_result.output
+
+
+def test_init_command_creates_backlog_agents_bootstrap(runner, tmp_path, monkeypatch):
+    """init should create .backlog/AGENTS.md and a CLAUDE.md symlink."""
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(
+        cli,
+        ["init", "--project", "Python CLI", "--description", "Bootstrap checks"],
+    )
+    assert result.exit_code == 0
+    assert_backlog_bootstrap_files(tmp_path / ".backlog")
+
+
+def test_migrate_command_creates_backlog_agents_bootstrap(tmp_tasks_dir, runner):
+    """migrate without symlink should create bootstrap files for .backlog."""
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Bootstrap Task")
+    result = runner.invoke(cli, ["migrate", "--no-symlink"])
+    assert result.exit_code == 0
+    assert (tmp_tasks_dir / ".backlog").is_dir()
+    assert not (tmp_tasks_dir / ".tasks").exists()
+    assert_backlog_bootstrap_files(tmp_tasks_dir / ".backlog")
+
+
+def test_nested_directory_repair_creates_backlog_bootstrap_files(tmp_tasks_dir, runner, monkeypatch):
+    """Command execution from nested dir should repair missing .backlog bootstrap files."""
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Nested Repair Task")
+    migrate_result = runner.invoke(cli, ["migrate", "--no-symlink"])
+    assert migrate_result.exit_code == 0
+
+    backlog_dir = tmp_tasks_dir / ".backlog"
+    for filename in ["AGENTS.md", "CLAUDE.md"]:
+        file_path = backlog_dir / filename
+        if file_path.exists() or file_path.is_symlink():
+            file_path.unlink()
+
+    nested = tmp_tasks_dir / "nested" / "deep"
+    nested.mkdir(parents=True)
+    monkeypatch.chdir(nested)
+
+    show_result = runner.invoke(cli, ["show", "P1.M1.E1.T001"])
+    assert show_result.exit_code == 0
+    assert "P1.M1.E1.T001" in show_result.output
+    assert_backlog_bootstrap_files(backlog_dir)

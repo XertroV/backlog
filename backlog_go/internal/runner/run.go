@@ -38,6 +38,7 @@ const (
 )
 
 const migrationComment = "<!-- CLI migrated: 'tasks' -> 'backlog' (alias 'bl' also works). -->\n"
+const backlogAgentsBootstrap = "# AGENTS.md\n\n## Agent workflow\n\n- Always use `bl` to create and modify backlog tasks.\n- Use `bl --help` before acting if you need command-level guidance.\n- Run `bl howto` to review workflow expectations.\n"
 
 var agentsSnippets = map[string]string{
 	"short":  "# AGENTS.md (Short)\n\n# Work Loop & Task Backlog\n\n## Task Workflow\n- Use `backlog grab` to claim work, then `backlog done` or `backlog cycle`.\n- If a command fails to parse args/usage, run exactly one recovery command: `backlog cycle`.\n- For explicit task IDs, use `backlog claim <TASK_ID> [TASK_ID ...]`.\n- Prefer critical-path work, then `critical > high > medium > low` priority.\n- If blocked, run `backlog blocked --reason \"<why>\"` and handoff quickly.\n- Keep each change scoped to one task; update status as soon as state changes.\n- Before done: run targeted tests for changed code.\n- For more see `backlog --help`.\n",
@@ -1834,6 +1835,9 @@ phases: []
 	)
 	if err := os.WriteFile(indexPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", indexPath, err)
+	}
+	if err := ensureBacklogAgentBootstrap(config.BacklogDir); err != nil {
+		return err
 	}
 	fmt.Printf("%s %s in %s/\n", styleSuccess("Initialized project"), styleMuted(fmt.Sprintf("%q", opts.project)), filepath.Dir(indexPath))
 	return nil
@@ -5978,6 +5982,9 @@ func runMigrate(args []string) error {
 
 	if info, err := os.Stat(backlogPath); err == nil && info.IsDir() {
 		if isSymlinkTo(tasksPath, backlogPath) {
+			if err := ensureBacklogAgentBootstrap(backlogPath); err != nil {
+				return fmt.Errorf("Failed to initialize AGENTS files: %w", err)
+			}
 			fmt.Println(styleSuccess("✓ Already migrated (.tasks is symlink to .backlog)"))
 			return nil
 		}
@@ -5985,8 +5992,14 @@ func runMigrate(args []string) error {
 			if !force {
 				return errors.New("Both .tasks/ and .backlog/ exist. Use --force to proceed.")
 			}
+			if err := ensureBacklogAgentBootstrap(backlogPath); err != nil {
+				return fmt.Errorf("Failed to initialize AGENTS files: %w", err)
+			}
 			fmt.Println(styleSuccess("✓ Both directories exist (force mode - using .backlog/)"))
 			return nil
+		}
+		if err := ensureBacklogAgentBootstrap(backlogPath); err != nil {
+			return fmt.Errorf("Failed to initialize AGENTS files: %w", err)
 		}
 		fmt.Println(styleSuccess("✓ Already migrated (.backlog/ exists)"))
 		return nil
@@ -6017,6 +6030,9 @@ func runMigrate(args []string) error {
 		if changed {
 			updated = append(updated, filepath.Base(mdPath))
 		}
+	}
+	if err := ensureBacklogAgentBootstrap(backlogPath); err != nil {
+		return fmt.Errorf("Failed to initialize AGENTS files: %w", err)
 	}
 	sort.Strings(updated)
 
@@ -10812,6 +10828,11 @@ func ensureDataRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if filepath.Base(dataDir) == config.BacklogDir {
+		if err := ensureBacklogAgentBootstrap(dataDir); err != nil {
+			return "", err
+		}
+	}
 	return dataDir, nil
 }
 
@@ -10837,6 +10858,30 @@ func ensureBacklogDataAvailable() error {
 	}
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func ensureBacklogAgentBootstrap(backlogDir string) error {
+	agentsPath := filepath.Join(backlogDir, "AGENTS.md")
+	if _, err := os.Stat(agentsPath); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if err := os.WriteFile(agentsPath, []byte(backlogAgentsBootstrap), 0o644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", agentsPath, err)
+		}
+	}
+
+	claudePath := filepath.Join(backlogDir, "CLAUDE.md")
+	if isSymlinkTo(claudePath, agentsPath) {
+		return nil
+	}
+	if err := os.RemoveAll(claudePath); err != nil {
+		return fmt.Errorf("failed to remove %s: %w", claudePath, err)
+	}
+	if err := os.Symlink("AGENTS.md", claudePath); err != nil {
+		return fmt.Errorf("failed to create symlink %s: %w", claudePath, err)
 	}
 	return nil
 }

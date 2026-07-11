@@ -1274,6 +1274,28 @@ func TestRunMigrateRenamesDataDirAndUpdatesDocs(t *testing.T) {
 	if !strings.Contains(agents, "`backlog list`") {
 		t.Fatalf("AGENTS.md = %q, expected command rewrite", agents)
 	}
+
+	bootstrapAgents := readFile(t, filepath.Join(root, ".backlog", "AGENTS.md"))
+	if !strings.Contains(bootstrapAgents, "Always use `bl` to create and modify backlog tasks.") {
+		t.Fatalf("bootstrap AGENTS.md = %q, expected task-creation instructions", bootstrapAgents)
+	}
+
+	claudePath := filepath.Join(root, ".backlog", "CLAUDE.md")
+	claudeInfo, err := os.Lstat(claudePath)
+	if err != nil {
+		t.Fatalf("expected CLAUDE.md symlink in .backlog: %v", err)
+	}
+	if claudeInfo.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected CLAUDE.md to be symlink, got mode %v", claudeInfo.Mode())
+	}
+	claudeTarget, err := os.Readlink(claudePath)
+	if err != nil {
+		t.Fatalf("readlink CLAUDE.md: %v", err)
+	}
+	if filepath.Clean(filepath.Join(filepath.Dir(claudePath), claudeTarget)) != filepath.Clean(filepath.Join(root, ".backlog", "AGENTS.md")) &&
+		claudeTarget != "AGENTS.md" {
+		t.Fatalf("expected CLAUDE.md to point to AGENTS.md, got %q", claudeTarget)
+	}
 }
 
 func TestRunMigrateRejectsBothDirectoriesWithoutForce(t *testing.T) {
@@ -2838,6 +2860,28 @@ func TestRunInitWritesBacklogIndex(t *testing.T) {
 	if phases, ok := index["phases"].([]interface{}); !ok || len(phases) != 0 {
 		t.Fatalf("phases = %#v, expected empty phase list", index["phases"])
 	}
+
+	bootstrapAgents := readFile(t, filepath.Join(root, ".backlog", "AGENTS.md"))
+	if !strings.Contains(bootstrapAgents, "Always use `bl` to create and modify backlog tasks.") {
+		t.Fatalf("bootstrap AGENTS.md = %q, expected task-creation instructions", bootstrapAgents)
+	}
+
+	claudePath := filepath.Join(root, ".backlog", "CLAUDE.md")
+	claudeInfo, err := os.Lstat(claudePath)
+	if err != nil {
+		t.Fatalf("expected CLAUDE.md symlink in .backlog: %v", err)
+	}
+	if claudeInfo.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected CLAUDE.md to be symlink, got mode %v", claudeInfo.Mode())
+	}
+	claudeTarget, err := os.Readlink(claudePath)
+	if err != nil {
+		t.Fatalf("readlink CLAUDE.md: %v", err)
+	}
+	if filepath.Clean(filepath.Join(filepath.Dir(claudePath), claudeTarget)) != filepath.Clean(filepath.Join(root, ".backlog", "AGENTS.md")) &&
+		claudeTarget != "AGENTS.md" {
+		t.Fatalf("expected CLAUDE.md to point to AGENTS.md, got %q", claudeTarget)
+	}
 }
 
 func TestRunInitRejectsDuplicateProject(t *testing.T) {
@@ -2866,6 +2910,57 @@ func TestRunInitRejectsInvalidTimeline(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid --timeline-weeks value") {
 		t.Fatalf("err = %q, expected timeline parse error", err)
+	}
+}
+
+func TestRunEnsureDataRootCreatesBacklogAgentsFromNestedDirectory(t *testing.T) {
+	t.Parallel()
+
+	root := setupAddFixture(t)
+	if _, err := runInDir(t, root, "migrate", "--no-symlink"); err != nil {
+		t.Fatalf("run migrate = %v, expected nil", err)
+	}
+
+	bootstrapPath := filepath.Join(root, ".backlog", "AGENTS.md")
+	claudePath := filepath.Join(root, ".backlog", "CLAUDE.md")
+	if err := os.Remove(bootstrapPath); err != nil && !os.IsNotExist(err) {
+		t.Fatalf("remove bootstrap AGENTS.md: %v", err)
+	}
+	if err := os.Remove(claudePath); err != nil && !os.IsNotExist(err) {
+		t.Fatalf("remove CLAUDE.md: %v", err)
+	}
+
+	nested := filepath.Join(root, "nested", "workdir")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("create nested dir: %v", err)
+	}
+
+	output, err := runInDir(t, nested, "show", "P1.M1.E1.T001")
+	if err != nil {
+		t.Fatalf("run show from nested dir = %v, expected nil", err)
+	}
+	if !strings.Contains(output, "P1.M1.E1.T001") {
+		t.Fatalf("output = %q, expected task details", output)
+	}
+
+	bootstrapAgents := readFile(t, bootstrapPath)
+	if !strings.Contains(bootstrapAgents, "Always use `bl` to create and modify backlog tasks.") {
+		t.Fatalf("bootstrap AGENTS.md = %q, expected task-creation instructions", bootstrapAgents)
+	}
+	claudeInfo, err := os.Lstat(claudePath)
+	if err != nil {
+		t.Fatalf("expected CLAUDE.md symlink in .backlog: %v", err)
+	}
+	if claudeInfo.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected CLAUDE.md to be symlink, got mode %v", claudeInfo.Mode())
+	}
+	claudeTarget, err := os.Readlink(claudePath)
+	if err != nil {
+		t.Fatalf("readlink CLAUDE.md: %v", err)
+	}
+	if filepath.Clean(filepath.Join(filepath.Dir(claudePath), claudeTarget)) != filepath.Clean(bootstrapPath) &&
+		claudeTarget != "AGENTS.md" {
+		t.Fatalf("expected CLAUDE.md to point to AGENTS.md, got %q", claudeTarget)
 	}
 }
 
