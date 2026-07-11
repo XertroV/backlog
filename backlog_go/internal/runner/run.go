@@ -10501,7 +10501,12 @@ func runDone(args []string, metadata *gitAutoCommitMetadata) error {
 		}
 		if err := applyTaskStatusTransition(task, status, ""); err != nil {
 			if force {
+				now := time.Now().UTC()
 				task.Status = status
+				task.UpdatedAt = &now
+				if status == models.StatusDone && task.CompletedAt == nil {
+					task.CompletedAt = &now
+				}
 			} else {
 				return err
 			}

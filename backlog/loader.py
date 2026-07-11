@@ -2630,6 +2630,7 @@ TODO: Describe actual behavior
             task.claimed_at = None
             task.started_at = None
             task.completed_at = None
+            task.updated_at = datetime.now(timezone.utc)
             task.duration_minutes = None
             self.save_task(task)
 

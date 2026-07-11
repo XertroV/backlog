@@ -1530,6 +1530,7 @@ ${data.title}
       task.claimedAt = undefined;
       task.startedAt = undefined;
       task.completedAt = undefined;
+      task.updatedAt = utcNow();
       task.durationMinutes = undefined;
       await this.saveTask(task);
     };
