@@ -62,6 +62,7 @@ export function claimTask(task: Task, agentId: string, force = false): void {
   task.claimedBy = agentId;
   task.claimedAt = now;
   task.startedAt = now;
+  task.updatedAt = now;
 }
 
 export function completeTask(task: Task, force = false): void {
@@ -74,7 +75,9 @@ export function completeTask(task: Task, force = false): void {
     );
   }
   task.status = Status.DONE;
-  task.completedAt = utcNow();
+  const now = utcNow();
+  task.completedAt = now;
+  task.updatedAt = now;
 }
 
 export function updateStatus(task: Task, next: Status, reason?: string): void {
@@ -113,8 +116,10 @@ export function updateStatus(task: Task, next: Status, reason?: string): void {
     task.claimedBy = undefined;
     task.claimedAt = undefined;
   }
+  const now = utcNow();
+  task.updatedAt = now;
   if (next === Status.DONE && !task.completedAt) {
-    task.completedAt = utcNow();
+    task.completedAt = now;
   }
 }
 

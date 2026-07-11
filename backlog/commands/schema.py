@@ -519,6 +519,18 @@ def _build_schema_spec() -> dict:
                         "Completion timestamp.",
                     ),
                     _field(
+                        "created_at",
+                        "datetime-iso8601|null",
+                        False,
+                        "Creation timestamp.",
+                    ),
+                    _field(
+                        "updated_at",
+                        "datetime-iso8601|null",
+                        False,
+                        "Last metadata update timestamp.",
+                    ),
+                    _field(
                         "duration_minutes",
                         "number|null",
                         False,
@@ -722,6 +734,8 @@ def _validate_schema_sync(spec: dict) -> list[str]:
         "claimed_by",
         "claimed_at",
         "started_at",
+        "created_at",
+        "updated_at",
         "completed_at",
         "duration_minutes",
     }

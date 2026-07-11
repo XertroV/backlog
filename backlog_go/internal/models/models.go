@@ -406,6 +406,8 @@ type Task struct {
 	DependsOn       []string
 	ClaimedBy       string
 	ClaimedAt       *time.Time
+	CreatedAt       *time.Time
+	UpdatedAt       *time.Time
 	StartedAt       *time.Time
 	CompletedAt     *time.Time
 	DurationMinutes *float64

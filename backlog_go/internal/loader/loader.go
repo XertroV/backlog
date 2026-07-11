@@ -415,6 +415,8 @@ func (l *Loader) loadTask(raw interface{}, taskRoot string, epPath models.TaskPa
 		DependsOn:     asStringSlice(entry["depends_on"]),
 		Tags:          asStringSlice(entry["tags"]),
 		Reason:        asString(entry["reason"]),
+		CreatedAt:     parseRFC3339(entry["created_at"]),
+		UpdatedAt:     parseRFC3339(entry["updated_at"]),
 		EpicID:        epPath.FullID(),
 		MilestoneID:   epPath.MilestoneID(),
 		PhaseID:       epPath.PhaseID(),
@@ -495,6 +497,12 @@ func (l *Loader) loadTask(raw interface{}, taskRoot string, epPath models.TaskPa
 	}
 	if completedAt, ok := front["completed_at"]; ok {
 		task.CompletedAt = parseRFC3339(completedAt)
+	}
+	if createdAt, ok := front["created_at"]; ok {
+		task.CreatedAt = parseRFC3339(createdAt)
+	}
+	if updatedAt, ok := front["updated_at"]; ok {
+		task.UpdatedAt = parseRFC3339(updatedAt)
 	}
 	if duration, ok := front["duration_minutes"].(float64); ok {
 		task.DurationMinutes = &duration

@@ -276,6 +276,8 @@ class Task:
     claimed_by: Optional[str] = None
     claimed_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_minutes: Optional[float] = (
         None  # Actual time spent, saved when task is marked done

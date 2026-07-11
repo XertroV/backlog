@@ -3765,6 +3765,7 @@ async function cmdAdd(args: string[]): Promise<AutoCommitMetadata> {
   const rawTags = parseOpt(args, "--tags");
   const tags = rawTags === undefined ? undefined : parseCsv(rawTags);
   const bodyOpt = parseOpt(args, "--body") ?? parseOpt(args, "-b");
+  const now = utcNow();
 
   const loader = new TaskLoader();
   const tree = await loader.load("metadata");
@@ -3803,6 +3804,8 @@ async function cmdAdd(args: string[]): Promise<AutoCommitMetadata> {
     priority,
     depends_on: dependsOn,
     tags,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
   };
   const body = bodyOpt ?? `\n# ${title}\n\n## Requirements\n\n- TODO: Add requirements\n\n## Acceptance Criteria\n\n- TODO: Add acceptance criteria\n`;
   await mkdir(dirname(fullFile), { recursive: true });

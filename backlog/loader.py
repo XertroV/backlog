@@ -243,6 +243,8 @@ class TaskLoader:
                 claimed_by=frontmatter.get("claimed_by"),
                 claimed_at=self._parse_datetime(frontmatter.get("claimed_at")),
                 started_at=self._parse_datetime(frontmatter.get("started_at")),
+                created_at=self._parse_datetime(frontmatter.get("created_at")),
+                updated_at=self._parse_datetime(frontmatter.get("updated_at")),
                 completed_at=self._parse_datetime(frontmatter.get("completed_at")),
                 duration_minutes=float(frontmatter["duration_minutes"])
                 if frontmatter.get("duration_minutes") is not None
@@ -738,6 +740,8 @@ class TaskLoader:
         # Parse datetime fields
         claimed_at = self._parse_datetime(frontmatter.get("claimed_at"))
         started_at = self._parse_datetime(frontmatter.get("started_at"))
+        created_at = self._parse_datetime(frontmatter.get("created_at"))
+        updated_at = self._parse_datetime(frontmatter.get("updated_at"))
         completed_at = self._parse_datetime(frontmatter.get("completed_at"))
 
         # Parse duration if present
@@ -765,6 +769,8 @@ class TaskLoader:
             claimed_by=frontmatter.get("claimed_by"),
             claimed_at=claimed_at,
             started_at=started_at,
+            created_at=created_at,
+            updated_at=updated_at,
             completed_at=completed_at,
             duration_minutes=duration_minutes,
             tags=frontmatter.get("tags", []),
@@ -957,6 +963,12 @@ class TaskLoader:
         frontmatter["started_at"] = (
             task.started_at.isoformat() if task.started_at else None
         )
+        frontmatter["created_at"] = (
+            task.created_at.isoformat() if task.created_at else None
+        )
+        frontmatter["updated_at"] = (
+            task.updated_at.isoformat() if task.updated_at else None
+        )
         frontmatter["completed_at"] = (
             task.completed_at.isoformat() if task.completed_at else None
         )
@@ -1111,6 +1123,8 @@ class TaskLoader:
                     claimed_by=frontmatter.get("claimed_by"),
                     claimed_at=self._parse_datetime(frontmatter.get("claimed_at")),
                     started_at=self._parse_datetime(frontmatter.get("started_at")),
+                    created_at=self._parse_datetime(frontmatter.get("created_at")),
+                    updated_at=self._parse_datetime(frontmatter.get("updated_at")),
                     completed_at=self._parse_datetime(frontmatter.get("completed_at")),
                     duration_minutes=float(frontmatter["duration_minutes"])
                     if frontmatter.get("duration_minutes") is not None
@@ -1189,6 +1203,8 @@ class TaskLoader:
                     claimed_by=frontmatter.get("claimed_by"),
                     claimed_at=self._parse_datetime(frontmatter.get("claimed_at")),
                     started_at=self._parse_datetime(frontmatter.get("started_at")),
+                    created_at=self._parse_datetime(frontmatter.get("created_at")),
+                    updated_at=self._parse_datetime(frontmatter.get("updated_at")),
                     completed_at=self._parse_datetime(frontmatter.get("completed_at")),
                     duration_minutes=float(frontmatter["duration_minutes"])
                     if frontmatter.get("duration_minutes") is not None
@@ -1262,6 +1278,7 @@ class TaskLoader:
             "depends_on": [],
             "tags": fixed_data.get("tags", []),
             "created_at": created_at.isoformat(),
+            "updated_at": created_at.isoformat(),
             "completed_at": created_at.isoformat(),
         }
 
@@ -1291,6 +1308,8 @@ class TaskLoader:
             complexity=Complexity.LOW,
             priority=Priority.LOW,
             depends_on=[],
+            created_at=created_at,
+            updated_at=created_at,
             tags=fixed_data.get("tags", []),
             epic_id=None,
             milestone_id=None,
@@ -1331,6 +1350,7 @@ class TaskLoader:
         file_path = bugs_dir / filename
 
         # Prepare frontmatter
+        created_at = datetime.now(timezone.utc)
         frontmatter = {
             "id": bug_id,
             "title": bug_data["title"],
@@ -1340,6 +1360,8 @@ class TaskLoader:
             "priority": bug_data.get("priority", "high"),
             "depends_on": bug_data.get("depends_on", []),
             "tags": bug_data.get("tags", []),
+            "created_at": created_at.isoformat(),
+            "updated_at": created_at.isoformat(),
         }
 
         if bug_data.get("body"):
@@ -1389,6 +1411,8 @@ TODO: Describe actual behavior
             complexity=Complexity(bug_data.get("complexity", "medium")),
             priority=Priority(bug_data.get("priority", "high")),
             depends_on=bug_data.get("depends_on", []),
+            created_at=created_at,
+            updated_at=created_at,
             tags=bug_data.get("tags", []),
             epic_id=None,
             milestone_id=None,
@@ -1421,6 +1445,7 @@ TODO: Describe actual behavior
         slug = self._slugify(idea_data["title"])
         filename = f"{idea_id}-{slug}.todo"
         file_path = ideas_dir / filename
+        created_at = datetime.now(timezone.utc)
 
         frontmatter = {
             "id": idea_id,
@@ -1431,6 +1456,8 @@ TODO: Describe actual behavior
             "priority": idea_data.get("priority", "medium"),
             "depends_on": idea_data.get("depends_on", []),
             "tags": idea_data.get("tags", ["idea", "planning"]),
+            "created_at": created_at.isoformat(),
+            "updated_at": created_at.isoformat(),
         }
 
         body = str(idea_data.get("body") or "").strip()
@@ -1496,6 +1523,8 @@ TODO: Describe actual behavior
             complexity=Complexity(idea_data.get("complexity", "medium")),
             priority=Priority(idea_data.get("priority", "medium")),
             depends_on=idea_data.get("depends_on", []),
+            created_at=created_at,
+            updated_at=created_at,
             tags=idea_data.get("tags", ["idea", "planning"]),
             epic_id=None,
             milestone_id=None,
@@ -1560,6 +1589,7 @@ TODO: Describe actual behavior
         task_file = epic_dir / filename
 
         # Prepare frontmatter
+        created_at = datetime.now(timezone.utc)
         frontmatter = {
             "id": full_task_id,
             "title": task_data["title"],
@@ -1569,6 +1599,8 @@ TODO: Describe actual behavior
             "priority": task_data.get("priority", "medium"),
             "depends_on": task_data.get("depends_on", []),
             "tags": task_data.get("tags", []),
+            "created_at": created_at.isoformat(),
+            "updated_at": created_at.isoformat(),
         }
 
         # Prepare body
@@ -1610,6 +1642,8 @@ TODO: Describe actual behavior
             complexity=Complexity(task_data.get("complexity", "medium")),
             priority=Priority(task_data.get("priority", "medium")),
             depends_on=task_data.get("depends_on", []),
+            created_at=created_at,
+            updated_at=created_at,
             tags=task_data.get("tags", []),
             epic_id=epic_id,
             milestone_id=epic_path.milestone_id,

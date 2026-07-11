@@ -2235,6 +2235,7 @@ func runAdd(args []string, metadata *gitAutoCommitMetadata) error {
 	if err := os.MkdirAll(epicDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create epic directory: %w", err)
 	}
+	now := time.Now().UTC()
 	slug := models.Slugify(title, models.DirectoryNameWidth*15)
 	taskFile := fmt.Sprintf("%s-%s.todo", nextTaskID, slug)
 	taskPath := filepath.Join(epicDir, taskFile)
@@ -2248,6 +2249,8 @@ func runAdd(args []string, metadata *gitAutoCommitMetadata) error {
 		"priority":       priority,
 		"depends_on":     dependsOn,
 		"tags":           tags,
+		"created_at":     now.Format(time.RFC3339),
+		"updated_at":     now.Format(time.RFC3339),
 	}
 	bodyText := body
 	if bodyText == "" {
@@ -3028,6 +3031,8 @@ func resetTaskToPending(task *models.Task) {
 	task.ClaimedAt = nil
 	task.StartedAt = nil
 	task.CompletedAt = nil
+	now := time.Now().UTC()
+	task.UpdatedAt = &now
 	task.DurationMinutes = nil
 	task.Reason = ""
 }
@@ -3288,9 +3293,10 @@ func applyTaskStatusTransition(task *models.Task, nextStatus models.Status, reas
 	}
 
 	task.Status = nextStatus
+	now := time.Now().UTC()
+	task.UpdatedAt = &now
 
 	if nextStatus == models.StatusDone && task.CompletedAt == nil {
-		now := time.Now().UTC()
 		task.CompletedAt = &now
 	}
 
@@ -3333,6 +3339,12 @@ func saveTaskState(task models.Task, tree models.TaskTree, bodyOverride ...strin
 	}
 	frontmatter["started_at"] = formatTimeForTodo(task.StartedAt)
 	frontmatter["completed_at"] = formatTimeForTodo(task.CompletedAt)
+	if task.CreatedAt != nil {
+		frontmatter["created_at"] = formatTimeForTodo(task.CreatedAt)
+	} else {
+		delete(frontmatter, "created_at")
+	}
+	frontmatter["updated_at"] = formatTimeForTodo(task.UpdatedAt)
 	if task.Reason != "" {
 		frontmatter["reason"] = task.Reason
 	} else {
@@ -5610,6 +5622,7 @@ func runIdea(args []string, metadata *gitAutoCommitMetadata) error {
 		}
 	}
 
+	now := time.Now().UTC()
 	frontmatter := map[string]interface{}{
 		"id":             ideaID,
 		"title":          title,
@@ -5619,6 +5632,8 @@ func runIdea(args []string, metadata *gitAutoCommitMetadata) error {
 		"priority":       string(priority),
 		"depends_on":     dependsOn,
 		"tags":           tags,
+		"created_at":     now.Format(time.RFC3339),
+		"updated_at":     now.Format(time.RFC3339),
 	}
 	if err := writeTodoWithFrontmatter(filePath, frontmatter, bodyText); err != nil {
 		return err
@@ -5771,6 +5786,7 @@ func runBug(args []string, metadata *gitAutoCommitMetadata) error {
 		}
 	}
 
+	now := time.Now().UTC()
 	frontmatter := map[string]interface{}{
 		"id":             bugID,
 		"title":          title,
@@ -5780,6 +5796,8 @@ func runBug(args []string, metadata *gitAutoCommitMetadata) error {
 		"priority":       string(priority),
 		"depends_on":     dependsOn,
 		"tags":           tags,
+		"created_at":     now.Format(time.RFC3339),
+		"updated_at":     now.Format(time.RFC3339),
 	}
 	if err := writeTodoWithFrontmatter(filePath, frontmatter, bodyText); err != nil {
 		return err
@@ -5909,6 +5927,7 @@ func runFixed(args []string) error {
 		"depends_on":     []string{},
 		"tags":           tags,
 		"created_at":     timestamp.UTC().Format(time.RFC3339),
+		"updated_at":     timestamp.UTC().Format(time.RFC3339),
 		"completed_at":   timestamp.UTC().Format(time.RFC3339),
 	}
 	if err := writeTodoWithFrontmatter(filePath, frontmatter, body); err != nil {
@@ -7275,6 +7294,7 @@ func claimTaskInTree(task *models.Task, agent string, now time.Time, tree models
 	task.ClaimedBy = agent
 	task.ClaimedAt = &now
 	task.StartedAt = &now
+	task.UpdatedAt = &now
 	return saveTaskState(*task, tree)
 }
 
@@ -9019,6 +9039,7 @@ func runClaim(args []string, metadata *gitAutoCommitMetadata) error {
 			now := time.Now().UTC()
 			task.ClaimedAt = &now
 			task.StartedAt = &now
+			task.UpdatedAt = &now
 
 			if err := saveTaskState(*task, tree); err != nil {
 				return err

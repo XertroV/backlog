@@ -5,6 +5,7 @@ import { performance } from "node:perf_hooks";
 import { parse, stringify } from "yaml";
 import { Complexity, Priority, Status, TaskPath, type Epic, type Milestone, type Phase, type Task, type TaskTree } from "./models";
 import { getDataDir } from "./data_dir";
+import { utcNow } from "./time";
 
 interface AnyRec {
   [k: string]: unknown;
@@ -190,6 +191,8 @@ export class TaskLoader {
       claimedAt: frontmatter.claimed_at ? new Date(String(frontmatter.claimed_at)) : undefined,
       startedAt: frontmatter.started_at ? new Date(String(frontmatter.started_at)) : undefined,
       completedAt: frontmatter.completed_at ? new Date(String(frontmatter.completed_at)) : undefined,
+      createdAt: frontmatter.created_at ? new Date(String(frontmatter.created_at)) : undefined,
+      updatedAt: frontmatter.updated_at ? new Date(String(frontmatter.updated_at)) : undefined,
       durationMinutes: frontmatter.duration_minutes ? Number(frontmatter.duration_minutes) : undefined,
       tags: ((frontmatter.tags as string[]) ?? []).slice(),
       reason: frontmatter.reason as string | undefined,
@@ -603,6 +606,8 @@ export class TaskLoader {
       claimedAt: frontmatter.claimed_at ? new Date(String(frontmatter.claimed_at)) : undefined,
       startedAt: frontmatter.started_at ? new Date(String(frontmatter.started_at)) : undefined,
       completedAt: frontmatter.completed_at ? new Date(String(frontmatter.completed_at)) : undefined,
+      createdAt: frontmatter.created_at ? new Date(String(frontmatter.created_at)) : undefined,
+      updatedAt: frontmatter.updated_at ? new Date(String(frontmatter.updated_at)) : undefined,
       durationMinutes: frontmatter.duration_minutes ? Number(frontmatter.duration_minutes) : undefined,
       tags: ((frontmatter.tags as string[]) ?? []).slice(),
       reason: frontmatter.reason as string | undefined,
@@ -721,6 +726,8 @@ export class TaskLoader {
     frontmatter.claimed_at = task.claimedAt?.toISOString() ?? null;
     frontmatter.started_at = task.startedAt?.toISOString() ?? null;
     frontmatter.completed_at = task.completedAt?.toISOString() ?? null;
+    frontmatter.created_at = task.createdAt?.toISOString() ?? null;
+    frontmatter.updated_at = task.updatedAt?.toISOString() ?? null;
     if (task.reason !== undefined) {
       frontmatter.reason = task.reason;
     } else {
@@ -827,6 +834,8 @@ export class TaskLoader {
         claimedAt: frontmatter.claimed_at ? new Date(String(frontmatter.claimed_at)) : undefined,
         startedAt: frontmatter.started_at ? new Date(String(frontmatter.started_at)) : undefined,
         completedAt: frontmatter.completed_at ? new Date(String(frontmatter.completed_at)) : undefined,
+        createdAt: frontmatter.created_at ? new Date(String(frontmatter.created_at)) : undefined,
+        updatedAt: frontmatter.updated_at ? new Date(String(frontmatter.updated_at)) : undefined,
         durationMinutes: frontmatter.duration_minutes ? Number(frontmatter.duration_minutes) : undefined,
         tags: ((frontmatter.tags as string[]) ?? []).slice(),
         reason: frontmatter.reason as string | undefined,
@@ -892,6 +901,8 @@ export class TaskLoader {
         claimedAt: frontmatter.claimed_at ? new Date(String(frontmatter.claimed_at)) : undefined,
         startedAt: frontmatter.started_at ? new Date(String(frontmatter.started_at)) : undefined,
         completedAt: frontmatter.completed_at ? new Date(String(frontmatter.completed_at)) : undefined,
+        createdAt: frontmatter.created_at ? new Date(String(frontmatter.created_at)) : undefined,
+        updatedAt: frontmatter.updated_at ? new Date(String(frontmatter.updated_at)) : undefined,
         durationMinutes: frontmatter.duration_minutes ? Number(frontmatter.duration_minutes) : undefined,
         tags: ((frontmatter.tags as string[]) ?? []).slice(),
         reason: frontmatter.reason as string | undefined,
@@ -924,6 +935,7 @@ export class TaskLoader {
     const filename = `${bugId}-${slugify(data.title)}.todo`;
     const filePath = join(bugsDir, filename);
 
+    const now = utcNow();
     const fm: AnyRec = {
       id: bugId,
       title: data.title,
@@ -933,6 +945,8 @@ export class TaskLoader {
       priority: data.priority ?? "high",
       depends_on: data.dependsOn ?? [],
       tags: data.tags ?? [],
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     };
     let body: string;
     if (data.body) {
@@ -961,6 +975,8 @@ export class TaskLoader {
       complexity: (data.complexity as Complexity) ?? Complexity.MEDIUM,
       priority: (data.priority as Priority) ?? Priority.HIGH,
       dependsOn: data.dependsOn ?? [],
+      createdAt: now,
+      updatedAt: now,
       tags: data.tags ?? [],
       epicId: undefined,
       milestoneId: undefined,
@@ -1021,6 +1037,7 @@ export class TaskLoader {
       depends_on: [],
       tags: data.tags ?? [],
       created_at: createdAt.toISOString(),
+      updated_at: createdAt.toISOString(),
       completed_at: createdAt.toISOString(),
     };
     await writeFile(filePath, `---\n${stringify(fm)}---\n${data.body ?? ""}`);
@@ -1041,6 +1058,8 @@ export class TaskLoader {
       complexity: Complexity.LOW,
       priority: Priority.LOW,
       dependsOn: [],
+      createdAt,
+      updatedAt: createdAt,
       tags: data.tags ?? [],
       epicId: undefined,
       milestoneId: undefined,
@@ -1073,6 +1092,7 @@ export class TaskLoader {
     const filename = `${ideaId}-${slugify(data.title)}.todo`;
     const filePath = join(ideasDir, filename);
 
+    const now = utcNow();
     const fm: AnyRec = {
       id: ideaId,
       title: data.title,
@@ -1082,6 +1102,8 @@ export class TaskLoader {
       priority: data.priority ?? "medium",
       depends_on: data.dependsOn ?? [],
       tags: data.tags ?? ["idea", "planning"],
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     };
 
     const body = typeof data.body === "string" && data.body.trim().length > 0
@@ -1135,6 +1157,8 @@ ${data.title}
       complexity: (data.complexity as Complexity) ?? Complexity.MEDIUM,
       priority: (data.priority as Priority) ?? Priority.MEDIUM,
       dependsOn: data.dependsOn ?? [],
+      createdAt: now,
+      updatedAt: now,
       tags: data.tags ?? ["idea", "planning"],
       epicId: undefined,
       milestoneId: undefined,

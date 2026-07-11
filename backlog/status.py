@@ -99,6 +99,7 @@ def claim_task(task: Task, agent_id: str, force: bool = False) -> None:
     task.claimed_by = agent_id
     task.claimed_at = now
     task.started_at = now
+    task.updated_at = now
 
 
 def complete_task(task: Task, force: bool = False) -> None:
@@ -119,8 +120,10 @@ def complete_task(task: Task, force: bool = False) -> None:
             suggestion=f"Only in-progress tasks can be completed. Current status: {task.status.value}",
         )
 
+    now = utc_now()
     task.status = Status.DONE
-    task.completed_at = utc_now()
+    task.completed_at = now
+    task.updated_at = now
 
 
 def update_status(task: Task, new_status: Status, reason: Optional[str] = None) -> None:
@@ -167,6 +170,7 @@ def update_status(task: Task, new_status: Status, reason: Optional[str] = None) 
 
     # Update status
     task.status = new_status
+    now = utc_now()
 
     # Clear claim if transitioning to pending
     if new_status == Status.PENDING:
@@ -175,7 +179,8 @@ def update_status(task: Task, new_status: Status, reason: Optional[str] = None) 
 
     # Set completion time if transitioning to done
     if new_status == Status.DONE and not task.completed_at:
-        task.completed_at = utc_now()
+        task.completed_at = now
+    task.updated_at = now
 
 
 def check_stale_claims(

@@ -191,6 +191,8 @@ export interface Task {
   claimedAt?: Date;
   startedAt?: Date;
   completedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
   durationMinutes?: number;
   tags: string[];
   reason?: string;
