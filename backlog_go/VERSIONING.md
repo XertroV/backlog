@@ -1,6 +1,8 @@
 # Go module versioning and tag strategy
 
-This module follows semantic versioning for public releases.
+This module follows semantic versioning for public releases. This document
+covers **version policy** only; for the step-by-step release procedure (tagging,
+CI, release notes) see [`../RELEASE.md`](../RELEASE.md).
 
 ## Version policy
 

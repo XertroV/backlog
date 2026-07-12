@@ -1,26 +1,19 @@
 # Go CLI release checklist
 
-## Pre-release verification
+> **The canonical release procedure lives in [`../RELEASE.md`](../RELEASE.md).**
+> Follow that document to cut a release (tag → babysit CI → curate the GitHub
+> release page). This file only lists the Go-specific pre-flight checks it refers
+> to.
 
-- [ ] Working tree is clean for intended release scope.
-- [ ] `go run . init --project` smoke path works on a fresh temporary directory.
-- [ ] `go test ./...` passes.
+## Pre-release verification (Go client)
+
+- [ ] Working tree is clean for the intended release scope.
 - [ ] `make fmt-check` passes.
-- [ ] Coverage gate passes (`make coverage-check COVERAGE_THRESHOLD=75`).
-- [ ] Command parity acceptance checklist completed (`PARITY_ACCEPTANCE_CHECKLIST.md`).
-- [ ] Known command gaps are reviewed in `COMMAND_PARITY_MATRIX.md`.
-- [ ] Golden fixture path under `backlog_go/testdata/parity-fixture/` remains stable.
+- [ ] `go mod tidy` leaves `go.sum` unchanged (committed and tidy).
+- [ ] `go test ./... -run '!TestRunParity'` passes.
+- [ ] Smoke build works: `go build -o /tmp/backlog . && /tmp/backlog version`.
+- [ ] Command parity acceptance checklist reviewed (`PARITY_ACCEPTANCE_CHECKLIST.md`).
+- [ ] Known command gaps reviewed (`COMMAND_PARITY_MATRIX.md`).
 
-## Release artifacts
-
-- Version tags are created from the module repository head when intended.
-- Binaries are built via `go build -o backlog .` and stored as release artifacts.
-- Workflow status in `.github/workflows/go-ci.yml` is green.
-
-## Post-release actions
-
-- Update documentation links in `backlog_go/README.md`.
-- Confirm release notes and handoff package are attached to the corresponding
-  migration task.
-- Keep parity and CI thresholds unchanged unless a specific policy change is
-  approved.
+These mirror the `validate` job in [`../.github/workflows/release.yml`](../.github/workflows/release.yml).
+Everything after this — tagging, CI, release notes — is in [`../RELEASE.md`](../RELEASE.md).

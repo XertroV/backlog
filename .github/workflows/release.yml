@@ -89,7 +89,10 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           cd ${{ env.GO_PROJECT_DIR }}
-          go build -ldflags "-s -w -X github.com/XertroV/tasks/backlog_go/cmd.BuildVersion=${{ steps.version.outputs.VERSION }}" \
+          # Strip the leading "v" so the binary reports e.g. "0.2.0", matching the source default.
+          BUILD_VERSION="${{ steps.version.outputs.VERSION }}"
+          BUILD_VERSION="${BUILD_VERSION#v}"
+          go build -ldflags "-s -w -X github.com/XertroV/tasks/backlog_go/cmd.BuildVersion=${BUILD_VERSION}" \
             -o "../${{ env.BINARY_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}" .
 
       - name: Upload artifact
@@ -112,9 +115,10 @@ jobs:
       - name: Generate changelog since last version tag
         id: changelog
         run: |
-          # Find the previous version tag
+          # Find the previous version tag by walking history back from the current
+          # tag's commit. --match 'v[0-9]*' skips non-version tags (e.g. `latest`).
           CURRENT_TAG="${GITHUB_REF_NAME}"
-          PREV_TAG=$(git tag --list 'v*' --sort=-version:refname | grep -A1 "^${CURRENT_TAG}$" | tail -1)
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${CURRENT_TAG}^" 2>/dev/null || true)
 
           if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$CURRENT_TAG" ]; then
             # First release — show all commits
@@ -141,6 +145,12 @@ jobs:
             echo "- Windows (amd64, arm64)"
             echo ""
             echo "Install: download the binary for your platform, make executable (\`chmod +x\`), and move to a directory on your \`PATH\`."
+            echo ""
+            echo "Verify a download against \`SHA256SUMS\`:"
+            echo ""
+            echo '```'
+            echo "sha256sum -c SHA256SUMS --ignore-missing"
+            echo '```'
           } > changelog.md
 
           # Also output for use in the release
@@ -166,15 +176,24 @@ jobs:
         with:
           path: artifacts
 
-      - name: List artifacts
-        run: find artifacts -type f | sort
+      - name: Collect binaries and generate checksums
+        run: |
+          mkdir -p dist
+          # Each binary artifact downloads to artifacts/<name>/<binary>; flatten them.
+          find artifacts -type f -name 'backlog-*' -exec cp {} dist/ \;
+          cd dist
+          sha256sum backlog-* > SHA256SUMS
+          echo "=== Release assets ==="
+          ls -la
+          echo "=== SHA256SUMS ==="
+          cat SHA256SUMS
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
           body_path: artifacts/changelog/changelog.md
-          files: artifacts/backlog-*/*
+          files: dist/*
           generate_release_notes: false
           draft: false
           prerelease: false
