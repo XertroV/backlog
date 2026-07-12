@@ -36,8 +36,16 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install Bun dependencies
+        # `yaml` is declared in backlog_ts/package.json; install must happen there
+        # so `bun build` (used by parity tests) can resolve it.
         run: bun install
-        working-directory: .
+        working-directory: backlog_ts
+
+      # Parity tests invoke `python backlog.py <cmd>`. Without these deps the
+      # import fails with `ModuleNotFoundError` (click, yaml, rich, networkx)
+      # and Python exits 1, which the Go parity test reports as `go=0 py=1`.
+      - name: Install Python dependencies
+        run: pip install click PyYAML rich networkx
 
       - name: Tidy
         run: make tidy

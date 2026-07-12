@@ -120,10 +120,18 @@ func TestRunParityCrossValidateGoAgainstPythonAndTypeScript(t *testing.T) {
 			tsResult.Stdout = sanitizeOutput(tsResult.Stdout, tsRoot)
 
 			if goResult.Code != pyResult.Code {
-				t.Fatalf("exit code mismatch go=%d py=%d for %q", goResult.Code, pyResult.Code, strings.Join(vector, " "))
+				t.Fatalf(
+					"exit code mismatch go=%d py=%d for %q\n--- go stdout ---\n%s\n--- py stdout ---\n%s",
+					goResult.Code, pyResult.Code, strings.Join(vector, " "),
+					goResult.Stdout, pyResult.Stdout,
+				)
 			}
 			if goResult.Code != tsResult.Code {
-				t.Fatalf("exit code mismatch go=%d ts=%d for %q", goResult.Code, tsResult.Code, strings.Join(vector, " "))
+				t.Fatalf(
+					"exit code mismatch go=%d ts=%d for %q\n--- go stdout ---\n%s\n--- ts stdout ---\n%s",
+					goResult.Code, tsResult.Code, strings.Join(vector, " "),
+					goResult.Stdout, tsResult.Stdout,
+				)
 			}
 
 			if hasArg(vector, "--json") {
@@ -178,7 +186,11 @@ func TestRunParityCrossValidateGoAgainstPython(t *testing.T) {
 			}
 
 			if goResult.Code != pyResult.Code {
-				t.Fatalf("exit code mismatch go=%d py=%d for %q", goResult.Code, pyResult.Code, strings.Join(vector, " "))
+				t.Fatalf(
+					"exit code mismatch go=%d py=%d for %q\n--- go stdout ---\n%s\n--- py stdout ---\n%s",
+					goResult.Code, pyResult.Code, strings.Join(vector, " "),
+					goResult.Stdout, pyResult.Stdout,
+				)
 			}
 
 			if hasArg(vector, "--json") {
@@ -260,10 +272,18 @@ func TestRunParityCrossValidateFailureModesAgainstPythonAndTypeScript(t *testing
 				t.Fatalf("expected go to fail %s", strings.Join(testCase.command, " "))
 			}
 			if goResult.Code != pyResult.Code {
-				t.Fatalf("exit code mismatch go=%d py=%d for %q", goResult.Code, pyResult.Code, strings.Join(testCase.command, " "))
+				t.Fatalf(
+					"exit code mismatch go=%d py=%d for %q\n--- go stdout ---\n%s\n--- py stdout ---\n%s",
+					goResult.Code, pyResult.Code, strings.Join(testCase.command, " "),
+					goResult.Stdout, pyResult.Stdout,
+				)
 			}
 			if goResult.Code != tsResult.Code {
-				t.Fatalf("exit code mismatch go=%d ts=%d for %q", goResult.Code, tsResult.Code, strings.Join(testCase.command, " "))
+				t.Fatalf(
+					"exit code mismatch go=%d ts=%d for %q\n--- go stdout ---\n%s\n--- ts stdout ---\n%s",
+					goResult.Code, tsResult.Code, strings.Join(testCase.command, " "),
+					goResult.Stdout, tsResult.Stdout,
+				)
 			}
 
 			if strings.TrimSpace(goResult.Stdout) == "" && goResult.Code != 0 {
