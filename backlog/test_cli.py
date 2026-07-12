@@ -2899,6 +2899,84 @@ def test_set_appends_body_when_append_body_flag_set(runner, tmp_tasks_dir):
     assert "# A" in content
 
 
+def _task_body(tmp_tasks_dir):
+    task_file = (
+        tmp_tasks_dir
+        / ".tasks"
+        / "01-test-phase"
+        / "01-test-milestone"
+        / "01-test-epic"
+        / "T001-test-task.todo"
+    )
+    content = task_file.read_text()
+    return content.split("---\n", 2)[2]
+
+
+def test_append_appends_text_argument_to_body(runner, tmp_tasks_dir):
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")
+
+    result = runner.invoke(cli, ["append", "P1.M1.E1.T001", "Progress note here"])
+    assert result.exit_code == 0
+    assert "Appended to: P1.M1.E1.T001" in result.output
+
+    body = _task_body(tmp_tasks_dir)
+    assert "Progress note here" in body
+    # Existing content is preserved and separated by a blank line.
+    assert "# Original body" in body
+    assert "\n\nProgress note here" in body
+
+
+def test_append_joins_multiple_word_arguments(runner, tmp_tasks_dir):
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")
+
+    result = runner.invoke(cli, ["append", "P1.M1.E1.T001", "one", "two", "three"])
+    assert result.exit_code == 0
+    assert "one two three" in _task_body(tmp_tasks_dir)
+
+
+def test_append_reads_from_stdin_when_no_arguments(runner, tmp_tasks_dir):
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")
+
+    result = runner.invoke(
+        cli, ["append", "P1.M1.E1.T001"], input="stdin line A\nstdin line B\n"
+    )
+    assert result.exit_code == 0
+    body = _task_body(tmp_tasks_dir)
+    assert "stdin line A" in body
+    assert "stdin line B" in body
+
+
+def test_append_requires_non_empty_text(runner, tmp_tasks_dir):
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")
+
+    result = runner.invoke(cli, ["append", "P1.M1.E1.T001"], input="")
+    assert result.exit_code != 0
+    assert "append requires" in result.output
+
+
+def test_append_reports_unknown_task(runner, tmp_tasks_dir):
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")
+
+    result = runner.invoke(cli, ["append", "P9.M9.E9.T999", "some note here"])
+    assert result.exit_code != 0
+    assert "not found" in result.output.lower()
+
+
+def test_append_works_on_bug_tasks(runner, tmp_tasks_dir):
+    bug_result = runner.invoke(cli, ["bug", "fix the flaky integration test"])
+    assert bug_result.exit_code == 0
+    bug_id = None
+    for line in bug_result.output.splitlines():
+        if "Created bug:" in line:
+            bug_id = line.split("Created bug:")[1].strip()
+            break
+    assert bug_id, bug_result.output
+
+    result = runner.invoke(cli, ["append", bug_id, "root cause identified"])
+    assert result.exit_code == 0
+    assert "Appended to" in result.output
+
+
 def test_set_auto_commits_when_no_staged_files(runner, tmp_tasks_dir):
     initialize_test_git_repo(tmp_tasks_dir)
     create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Original body")

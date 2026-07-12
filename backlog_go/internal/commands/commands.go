@@ -36,6 +36,7 @@ const (
 	CmdAddMilestone  = "add-milestone"
 	CmdAddPhase      = "add-phase"
 	CmdSet           = "set"
+	CmdAppend        = "append"
 	CmdUnclaim       = "unclaim"
 	CmdSync          = "sync"
 	CmdUpdate        = "update"

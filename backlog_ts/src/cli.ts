@@ -253,6 +253,10 @@ function autoCommitMessage(command: string, metadata: AutoCommitMetadata | null)
     if (!metadata?.id) return "bl set";
     return formatAutoCommitMessage("bl set", metadata);
   }
+  if (command === "append") {
+    if (!metadata?.id) return "bl append";
+    return formatAutoCommitMessage("bl append", metadata);
+  }
   if (command === "edit") {
     if (!metadata?.id) return "bl edit";
     return formatAutoCommitMessage("bl edit", metadata);
@@ -663,6 +667,7 @@ const commandHelpSpecs: Record<string, CommandHelpSpec> = {
   search: { summary: "Search tasks by pattern.", usage: "backlog search <PATTERN> [options]", options: ["--status", "--tags", "--complexity", "--priority", "--limit", "--json"], examples: ["backlog search auth", "backlog search --status pending --limit 5 auth"] },
   session: { summary: "Manage agent sessions.", usage: "backlog session <start|heartbeat|list|end|clean> [--agent AGENT] [--timeout MINUTES]", options: ["start", "heartbeat", "list", "end", "clean"], examples: ["backlog session start --agent agent-a", "backlog session list"] },
   set: { summary: "Set task properties (status/priority/etc).", usage: "backlog set <TASK_ID> [property flags]", options: ["--status", "--priority", "--complexity", "--estimate", "--title", "--depends-on", "--tags", "--reason", "--body, -b", "--append-body"], examples: ["backlog set P1.M1.E1.T001 --priority high --tags api,auth", "backlog set P1.M1.E1.T001 --body \"seed\" --append-body"] },
+  append: { summary: "Append text to a task body (args or stdin).", usage: "backlog append <TASK_ID> [TEXT ...]", options: [], examples: ["backlog append P1.M1.E1.T001 \"progress note\"", "echo \"multi-line note\" | backlog append P1.M1.E1.T001"] },
   show: {
     summary: "Show detailed info for task/phase/milestone/epic.",
     usage: "backlog show [PATH_ID ...] [--long] [--all]",
@@ -3129,6 +3134,45 @@ async function cmdSet(args: string[]): Promise<AutoCommitMetadata> {
   return metadata;
 }
 
+async function cmdAppend(args: string[]): Promise<AutoCommitMetadata> {
+  const taskId = args[0];
+  if (!taskId || taskId.startsWith("-")) textError("append requires TASK_ID");
+
+  const textArgs = args.slice(1);
+  // append takes no options; a dash-prefixed token is a mistake. Reject it so
+  // behaviour matches the Python/Go clients (use stdin for dash-leading text).
+  const stray = textArgs.find((a) => a.startsWith("-"));
+  if (stray) textError(`unexpected flag: ${stray}`);
+
+  let text = textArgs.join(" ");
+  if (!text.trim()) {
+    if (process.stdin.isTTY) {
+      textError(
+        'append requires text: pass it as arguments or pipe via stdin\n' +
+          '  backlog append <TASK_ID> "text to append"\n' +
+          '  echo "text" | backlog append <TASK_ID>',
+      );
+    }
+    text = await Bun.stdin.text();
+  }
+  text = text.replace(/\n+$/, "");
+  if (!text.trim()) textError("append requires non-empty text");
+
+  const loader = new TaskLoader();
+  const tree = await loader.load("metadata");
+  const task = findTask(tree, taskId);
+  if (!task) textError(`Task not found: ${taskId}`);
+
+  await loader.saveTask(task, text, true);
+
+  const preview = text.length <= 200 ? text : `${text.slice(0, 200)}…`;
+  console.log(`Appended to: ${task.id}  ${task.title}`);
+  console.log(preview);
+  printNextCommands([`backlog show ${task.id}`, `backlog cat ${task.id}`]);
+
+  return { id: task.id, title: task.title };
+}
+
 async function cmdWork(args: string[]): Promise<void> {
   const commandArgs = positionalArgsForCommand(
     args,
@@ -4722,6 +4766,9 @@ async function main(): Promise<void> {
       return;
     case "set":
       await runWithAutoCommit("set", () => cmdSet(rest));
+      return;
+    case "append":
+      await runWithAutoCommit("append", () => cmdAppend(rest));
       return;
     case "work":
       await cmdWork(rest);

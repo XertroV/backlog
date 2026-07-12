@@ -3610,6 +3610,71 @@ def set(
 
 
 # ============================================================================
+# Append Command
+# ============================================================================
+
+
+@cli.command()
+@click.argument("task_id")
+@click.argument("text_words", nargs=-1, required=False)
+def append(task_id, text_words):
+    """Append text to a task's body (from arguments or stdin).
+
+    \b
+    Examples:
+      backlog append P1.M1.E1.T001 "Investigated root cause; see PR #42"
+      echo "multi-line note" | backlog append P1.M1.E1.T001
+    """
+    import sys
+
+    try:
+        text = " ".join(text_words) if text_words else ""
+        if not text.strip():
+            if sys.stdin.isatty():
+                raise click.ClickException(
+                    "append requires text: pass it as arguments or pipe via stdin\n"
+                    '  backlog append <TASK_ID> "text to append"\n'
+                    '  echo "text" | backlog append <TASK_ID>'
+                )
+            text = sys.stdin.read()
+        text = text.rstrip("\n")
+        if not text.strip():
+            raise click.ClickException("append requires non-empty text")
+
+        metadata: tuple[str, str] | None = None
+
+        def _run() -> tuple[str, str] | None:
+            nonlocal metadata
+            loader = TaskLoader()
+            tree = loader.load("metadata")
+            task = tree.find_task(task_id)
+            if not task:
+                console.print(f"[red]Error:[/] Task not found: {task_id}")
+                raise click.Abort()
+
+            loader.save_task(task, body=text, append_body=True)
+            metadata = (task.id, task.title)
+
+            preview = text if len(text) <= 200 else text[:200] + "…"
+            console.print(f"\n[green]✓ Appended to:[/] {task.id}  {task.title}\n")
+            console.print(f"[dim]{preview}[/]\n")
+            _print_next_commands(
+                f"backlog show {task.id}",
+                f"backlog cat {task.id}",
+            )
+            return metadata
+
+        run_with_auto_commit(
+            "append",
+            _run,
+            warn=lambda msg: console.print(f"[yellow]Warning:[/] {msg}"),
+        )
+    except ValueError as e:
+        console.print(f"[red]Error:[/] {e}")
+        raise click.Abort()
+
+
+# ============================================================================
 # Sync Command
 # ============================================================================
 

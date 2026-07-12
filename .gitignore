@@ -25,3 +25,6 @@ docs/.generated/
 
 
 node_modules/
+
+# git worktrees for feature work
+.worktrees/
