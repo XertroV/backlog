@@ -23,6 +23,7 @@ implementations for milestone release planning.
 | `add-milestone` | ✅ | Parity-targeted |
 | `add-phase` | ✅ | Parity-targeted |
 | `set` | ✅ | Parity-targeted |
+| `append` | ✅ | Parity-targeted |
 | `update` | ✅ | Parity-targeted |
 | `claim` | ✅ | Parity-targeted |
 | `done` | ✅ | Parity-targeted |

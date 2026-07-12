@@ -950,6 +950,68 @@ describe("native cli", () => {
     expect(todo.indexOf("appended body")).toBeGreaterThan(todo.indexOf("first body"));
   });
 
+  const t001Path = (root: string) =>
+    join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo");
+
+  const runWithStdin = (args: string[], cwd: string, input: string) =>
+    Bun.spawnSync(["bun", "run", cliPath, ...args], {
+      cwd,
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: new TextEncoder().encode(input),
+      env: { ...process.env },
+    });
+
+  test("append adds text argument to task body", () => {
+    root = setupFixture();
+    const p = run(["append", "P1.M1.E1.T001", "progress note here"], root);
+    expect(p.exitCode).toBe(0);
+    expect(p.stdout.toString()).toContain("Appended to: P1.M1.E1.T001");
+    const todo = readFileSync(t001Path(root), "utf8");
+    expect(todo).toContain("# A");
+    expect(todo).toContain("progress note here");
+    // Preserved existing body, separated by a blank line.
+    expect(todo).toContain("\n\nprogress note here");
+  });
+
+  test("append joins multiple word arguments", () => {
+    root = setupFixture();
+    const p = run(["append", "P1.M1.E1.T001", "one", "two", "three"], root);
+    expect(p.exitCode).toBe(0);
+    expect(readFileSync(t001Path(root), "utf8")).toContain("one two three");
+  });
+
+  test("append reads from stdin when no text arguments", () => {
+    root = setupFixture();
+    const p = runWithStdin(["append", "P1.M1.E1.T001"], root, "stdin line A\nstdin line B\n");
+    expect(p.exitCode).toBe(0);
+    const todo = readFileSync(t001Path(root), "utf8");
+    expect(todo).toContain("stdin line A");
+    expect(todo).toContain("stdin line B");
+  });
+
+  test("append requires non-empty text", () => {
+    root = setupFixture();
+    const p = runWithStdin(["append", "P1.M1.E1.T001"], root, "");
+    expect(p.exitCode).toBe(1);
+    expect(`${p.stdout.toString()}${p.stderr.toString()}`).toContain("append requires");
+  });
+
+  test("append reports unknown task", () => {
+    root = setupFixture();
+    const p = run(["append", "P9.M9.E9.T999", "some note here"], root);
+    expect(p.exitCode).toBe(1);
+    expect(`${p.stdout.toString()}${p.stderr.toString()}`).toContain("Task not found");
+  });
+
+  test("append works on bug tasks", () => {
+    root = setupFixture(true);
+    const p = run(["append", "B001", "root cause identified"], root);
+    expect(p.exitCode).toBe(0);
+    const todo = readFileSync(join(root, ".tasks", "bugs", "B001-critical-bug.todo"), "utf8");
+    expect(todo).toContain("root cause identified");
+  });
+
   test("set rejects invalid dependency id", () => {
     root = setupFixture();
     const p = run(["set", "P1.M1.E1.T001", "--depends-on", "not a task id"], root);

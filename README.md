@@ -125,6 +125,7 @@ The engine builds a dependency graph across all tasks, computes a CCPM-style cri
 | `done [ID]` | Complete task, show newly unblocked work |
 | `update ID STATUS` | Manual status transition (`--reason` for blocked/rejected/cancelled) |
 | `set ID` | Modify task properties (status, priority, complexity, estimate, tags, deps) |
+| `append ID [TEXT]` | Append text to a task body (from arguments or piped stdin) |
 | `sync` | Recalculate stats and critical path |
 | `check` | Consistency checks (missing files, broken deps, cycles, ID integrity) |
 

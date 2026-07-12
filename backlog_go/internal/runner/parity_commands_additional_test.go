@@ -1,11 +1,128 @@
 package runner
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+// runAppendWithStdin runs the append command with os.Stdin redirected to a
+// temp file containing stdinContent. Callers must NOT mark the test parallel:
+// os.Stdin is process-global, so the redirect is only safe while no other
+// stdin-reading command runs concurrently.
+func runAppendWithStdin(t *testing.T, dir, stdinContent string, args ...string) (string, error) {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "stdin-*")
+	if err != nil {
+		t.Fatalf("create temp stdin: %v", err)
+	}
+	if _, err := f.WriteString(stdinContent); err != nil {
+		t.Fatalf("write temp stdin: %v", err)
+	}
+	if _, err := f.Seek(0, 0); err != nil {
+		t.Fatalf("seek temp stdin: %v", err)
+	}
+	oldStdin := os.Stdin
+	os.Stdin = f
+	defer func() {
+		os.Stdin = oldStdin
+		f.Close()
+	}()
+	return runInDir(t, dir, args...)
+}
+
+func TestRunAppendAddsTextArgumentToBody(t *testing.T) {
+	t.Parallel()
+
+	root := setupWorkflowFixture(t)
+	output, err := runInDir(t, root, "append", "P1.M1.E1.T001", "progress note here")
+	if err != nil {
+		t.Fatalf("run append = %v, expected nil", err)
+	}
+	if !strings.Contains(output, "Appended to: P1.M1.E1.T001") {
+		t.Fatalf("output = %q, expected append confirmation", output)
+	}
+
+	taskText := readFile(t, filepath.Join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo"))
+	if !strings.Contains(taskText, "progress note here") {
+		t.Fatalf("task text missing appended content: %q", taskText)
+	}
+
+	// A second append is blank-line separated from the first.
+	if _, err := runInDir(t, root, "append", "P1.M1.E1.T001", "second note here"); err != nil {
+		t.Fatalf("run append (second) = %v, expected nil", err)
+	}
+	taskText = readFile(t, filepath.Join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo"))
+	if !strings.Contains(taskText, "progress note here\n\nsecond note here") {
+		t.Fatalf("expected blank-line separator between appends: %q", taskText)
+	}
+}
+
+func TestRunAppendJoinsMultipleWordArguments(t *testing.T) {
+	t.Parallel()
+
+	root := setupWorkflowFixture(t)
+	if _, err := runInDir(t, root, "append", "P1.M1.E1.T001", "one", "two", "three"); err != nil {
+		t.Fatalf("run append = %v, expected nil", err)
+	}
+	taskText := readFile(t, filepath.Join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo"))
+	if !strings.Contains(taskText, "one two three") {
+		t.Fatalf("task text missing joined words: %q", taskText)
+	}
+}
+
+func TestRunAppendReadsFromStdin(t *testing.T) {
+	root := setupWorkflowFixture(t)
+	output, err := runAppendWithStdin(t, root, "stdin line A\nstdin line B\n", "append", "P1.M1.E1.T001")
+	if err != nil {
+		t.Fatalf("run append stdin = %v, expected nil", err)
+	}
+	if !strings.Contains(output, "Appended to: P1.M1.E1.T001") {
+		t.Fatalf("output = %q, expected append confirmation", output)
+	}
+	taskText := readFile(t, filepath.Join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T001-a.todo"))
+	for _, expected := range []string{"stdin line A", "stdin line B"} {
+		if !strings.Contains(taskText, expected) {
+			t.Fatalf("task text missing %q: %q", expected, taskText)
+		}
+	}
+}
+
+func TestRunAppendRequiresText(t *testing.T) {
+	root := setupWorkflowFixture(t)
+	_, err := runAppendWithStdin(t, root, "", "append", "P1.M1.E1.T001")
+	if err == nil {
+		t.Fatalf("run append expected error when no text provided")
+	}
+	if !strings.Contains(err.Error(), "append requires") {
+		t.Fatalf("err = %q, expected append usage error", err)
+	}
+}
+
+func TestRunAppendReportsUnknownTask(t *testing.T) {
+	t.Parallel()
+
+	root := setupWorkflowFixture(t)
+	_, err := runInDir(t, root, "append", "P9.M9.E9.T999", "some note here")
+	if err == nil {
+		t.Fatalf("run append expected error for unknown task")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("err = %q, expected not-found error", err)
+	}
+}
+
+func TestRunAppendRejectsStrayFlag(t *testing.T) {
+	t.Parallel()
+
+	root := setupWorkflowFixture(t)
+	_, err := runInDir(t, root, "append", "P1.M1.E1.T001", "-x", "note")
+	if err == nil {
+		t.Fatalf("run append expected error for stray flag")
+	}
+}
 
 func TestRunDataExportJSONIncludesScopedTasksAndContent(t *testing.T) {
 	t.Parallel()

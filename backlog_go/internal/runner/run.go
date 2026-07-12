@@ -215,6 +215,14 @@ var commandUsageFallbacks = map[string]commandUsageSpec{
 		usage:    "backlog edit <TASK_ID>",
 		examples: []string{"backlog edit P1.M1.E1.T001"},
 	},
+	"append": {
+		summary: "Append text to a task body (from arguments or stdin).",
+		usage:   "backlog append <TASK_ID> [TEXT ...]",
+		examples: []string{
+			"backlog append P1.M1.E1.T001 \"progress note\"",
+			"echo \"multi-line note\" | backlog append P1.M1.E1.T001",
+		},
+	},
 	"schema": {
 		summary:  "Print backlog file format schema.",
 		usage:    "backlog schema [--json] [--compact]",
@@ -980,6 +988,8 @@ func Run(rawArgs ...string) error {
 		return runUnclaimStale(payload)
 	case commands.CmdSet:
 		return runWithAutoCommit("set", payload, runSet)
+	case commands.CmdAppend:
+		return runWithAutoCommit("append", payload, runAppend)
 	case commands.CmdUpdate:
 		return runUpdate(payload)
 	case commands.CmdUndone:
@@ -1019,6 +1029,7 @@ const (
 	autoCommitUndonePrefix  = "bl undone"
 	autoCommitSetPrefix     = "bl set"
 	autoCommitEditPrefix    = "bl edit"
+	autoCommitAppendPrefix  = "bl append"
 )
 
 type gitAutoCommitContext struct {
@@ -1168,6 +1179,11 @@ func autoCommitMessage(command string, metadata gitAutoCommitMetadata) string {
 			return autoCommitSetPrefix
 		}
 		return formatAutoCommitMessage(autoCommitSetPrefix, metadata)
+	case "append":
+		if id == "" {
+			return autoCommitAppendPrefix
+		}
+		return formatAutoCommitMessage(autoCommitAppendPrefix, metadata)
 	case "edit":
 		if id == "" {
 			return autoCommitEditPrefix
@@ -2881,15 +2897,7 @@ func runSet(args []string, metadata *gitAutoCommitMetadata) error {
 				fmt.Errorf("Cannot append body for %s because the task file is missing.", task.ID),
 			)
 		}
-		if existingBody == "" {
-			bodyToWrite = body
-		} else if strings.HasSuffix(existingBody, "\n\n") {
-			bodyToWrite = existingBody + body
-		} else if strings.HasSuffix(existingBody, "\n") {
-			bodyToWrite = existingBody + "\n" + body
-		} else {
-			bodyToWrite = existingBody + "\n\n" + body
-		}
+		bodyToWrite = joinAppendedBody(existingBody, body)
 	}
 
 	if metadata != nil && metadata.id == "" {
@@ -2907,6 +2915,123 @@ func runSet(args []string, metadata *gitAutoCommitMetadata) error {
 	fmt.Printf("%s %s\n", styleSuccess("Updated:"), styleSuccess(task.ID))
 	printNextCommands("backlog show " + task.ID)
 	return nil
+}
+
+// joinAppendedBody appends addition to existingBody, ensuring a blank-line
+// separator between existing content and the new text. Shared by set
+// --append-body and the append command so behaviour stays identical.
+func joinAppendedBody(existingBody, addition string) string {
+	if existingBody == "" {
+		return addition
+	}
+	if strings.HasSuffix(existingBody, "\n\n") {
+		return existingBody + addition
+	}
+	if strings.HasSuffix(existingBody, "\n") {
+		return existingBody + "\n" + addition
+	}
+	return existingBody + "\n\n" + addition
+}
+
+func runAppend(args []string, metadata *gitAutoCommitMetadata) error {
+	if _, err := ensureDataRoot(); err != nil {
+		return err
+	}
+	if parseFlag(args, "--help", "-h") {
+		printUsageForCommand(commands.CmdAppend)
+		return nil
+	}
+	if err := validateAllowedFlagsForUsage(commands.CmdAppend, args, map[string]bool{
+		"--help": true,
+		"-h":     true,
+	}); err != nil {
+		return err
+	}
+
+	positional := positionalArgs(args, map[string]bool{})
+	if len(positional) == 0 {
+		return printUsageError(commands.CmdAppend, errors.New("append requires TASK_ID"))
+	}
+	taskID := positional[0]
+	if err := validateTaskID(taskID); err != nil {
+		return printUsageError(commands.CmdAppend, err)
+	}
+
+	text := strings.Join(positional[1:], " ")
+	if strings.TrimSpace(text) == "" {
+		stdinText, err := readStdinIfPiped()
+		if err != nil {
+			return printUsageError(commands.CmdAppend, err)
+		}
+		if stdinText == "" {
+			return printUsageError(commands.CmdAppend, errors.New(
+				"append requires text: pass it as arguments or pipe via stdin\n"+
+					"  backlog append <TASK_ID> \"text to append\"\n"+
+					"  echo \"text\" | backlog append <TASK_ID>"))
+		}
+		text = stdinText
+	}
+	text = strings.TrimRight(text, "\n")
+	if strings.TrimSpace(text) == "" {
+		return printUsageError(commands.CmdAppend, errors.New("append requires non-empty text"))
+	}
+
+	tree, err := loader.New().Load("metadata", true, true)
+	if err != nil {
+		return err
+	}
+	task := tree.FindTask(taskID)
+	if task == nil {
+		return fmt.Errorf("Task not found: %s", taskID)
+	}
+
+	_, existingBody, warnings, missing, err := readTodoFrontmatter(task.ID, task.File)
+	if err != nil {
+		return printUsageError(commands.CmdAppend, err)
+	}
+	printTodoFileWarnings(warnings)
+	if missing {
+		return printUsageError(
+			commands.CmdAppend,
+			fmt.Errorf("Cannot append body for %s because the task file is missing.", task.ID),
+		)
+	}
+
+	if metadata != nil && metadata.id == "" {
+		metadata.id = task.ID
+		metadata.title = task.Title
+	}
+
+	if err := saveTaskState(*task, tree, joinAppendedBody(existingBody, text)); err != nil {
+		return err
+	}
+
+	preview := text
+	if len(preview) > 200 {
+		preview = preview[:200] + "…"
+	}
+	fmt.Printf("%s %s  %s\n", styleSuccess("Appended to:"), styleSuccess(task.ID), task.Title)
+	fmt.Println(preview)
+	printNextCommands("backlog show "+task.ID, "backlog cat "+task.ID)
+	return nil
+}
+
+// readStdinIfPiped returns stdin contents when input is piped/redirected, or
+// an empty string when stdin is an interactive terminal (nothing to read).
+func readStdinIfPiped() (string, error) {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", err
+	}
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		// Interactive terminal: no piped input available.
+		return "", nil
+	}
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(os.Stdin); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func runUpdate(args []string) error {

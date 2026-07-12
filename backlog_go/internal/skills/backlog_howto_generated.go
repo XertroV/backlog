@@ -2,7 +2,7 @@
 
 package skills
 
-const BacklogHowtoSkillVersion = "2026-06-30T04:49:59Z"
+const BacklogHowtoSkillVersion = "2026-07-12T02:45:41Z"
 
 const BacklogHowtoSkillMD = `---
 name: backlog-howto
@@ -11,7 +11,7 @@ description: Backlog manual and overview for idea intake, task workflows, common
 
 # Backlog How-To
 
-Skill-Version: 2026-06-30T04:49:59Z
+Skill-Version: 2026-07-12T02:45:41Z
 
 Use this skill as an overview/manual for daily backlog operation.
 
@@ -60,6 +60,9 @@ Always claim before you start, and done when you finish.
 
 - Read raw task file:
   backlog cat TASK_ID
+- Append notes to a task body (args or stdin):
+  backlog append TASK_ID "progress note"
+  echo "multi-line note" | backlog append TASK_ID
 - Explicit claim by known IDs:
   backlog claim TASK_ID TASK_ID
 - Auto selection:

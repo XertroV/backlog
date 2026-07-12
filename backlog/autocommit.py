@@ -91,6 +91,8 @@ def _auto_commit_message(command: str, metadata: tuple[str, str] | None = None) 
         prefix = "bl undone"
     elif command == "set":
         prefix = "bl set"
+    elif command == "append":
+        prefix = "bl append"
 
     if metadata is None:
         return prefix
