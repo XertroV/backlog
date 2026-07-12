@@ -17,7 +17,7 @@ GitHub release page.
   version release — ignore it for tagged releases; production users consume
   `vX.Y.Z` releases only.
 
-Repo: `XertroV/tasks`. Tags and releases are named `vX.Y.Z`; the binary itself
+Repo: `XertroV/backlog`. Tags and releases are named `vX.Y.Z`; the binary itself
 reports the version **without** the `v` prefix (e.g. `backlog version 0.2.0`).
 
 ## Versioning policy
@@ -33,7 +33,7 @@ Pick the bump by diffing against the previous release (`git log <prev-tag>..HEAD
 
 ## Prerequisites
 
-- `gh` authenticated (`gh auth status`) with push access to `XertroV/tasks`.
+- `gh` authenticated (`gh auth status`) with push access to `XertroV/backlog`.
 - Local `master` up to date with `origin/master`.
 - A clean working tree (`git status`).
 

@@ -38,12 +38,12 @@ Dual implementation: **Python** (`backlog/`) and **TypeScript/Bun** (`backlog_ts
 ### Prebuilt binary (recommended)
 
 The Go client is the canonical build. Download a binary for your platform from
-the [latest release](https://github.com/XertroV/tasks/releases/latest) — targets
+the [latest release](https://github.com/XertroV/backlog/releases/latest) — targets
 are `linux`, `darwin`, `windows` × `amd64`, `arm64`:
 
 ```bash
 # example: Linux amd64
-gh release download --repo XertroV/tasks --pattern 'backlog-linux-amd64' --pattern 'SHA256SUMS'
+gh release download --repo XertroV/backlog --pattern 'backlog-linux-amd64' --pattern 'SHA256SUMS'
 sha256sum -c SHA256SUMS --ignore-missing        # verify
 chmod +x backlog-linux-amd64
 mv backlog-linux-amd64 ~/.local/bin/backlog     # somewhere on your PATH
