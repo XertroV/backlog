@@ -2916,7 +2916,7 @@ func TestRunInitRejectsInvalidTimeline(t *testing.T) {
 func TestRunEnsureDataRootCreatesBacklogAgentsFromNestedDirectory(t *testing.T) {
 	t.Parallel()
 
-	root := setupAddFixture(t)
+	root := setupWorkflowFixture(t)
 	if _, err := runInDir(t, root, "migrate", "--no-symlink"); err != nil {
 		t.Fatalf("run migrate = %v, expected nil", err)
 	}

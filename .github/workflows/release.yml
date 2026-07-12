@@ -38,7 +38,10 @@ jobs:
         run: make fmt-check
 
       - name: Test
-        run: go test ./... -run '!TestRunParity'
+        # Exclude cross-client parity tests: they require bun+python, which this
+        # release pipeline intentionally does not provision. `-run '!...'` is NOT
+        # a negation in Go (it silently matches nothing) — use `-skip`.
+        run: go test ./... -skip 'TestRunParity'
 
 
 

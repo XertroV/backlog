@@ -48,7 +48,7 @@ func TestSemanticSnapshotsForCriticalTextCommands(t *testing.T) {
 			anchors: []string{
 				"Available Tasks (",
 				"Legend: ★ critical path, status icon indicates current state",
-				"Use `backlog grab`",
+				"Use `bl claim TASK_ID` to claim a specific task, or `backlog grab` to auto-claim the best available task.",
 			},
 		},
 		{
