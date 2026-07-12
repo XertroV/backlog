@@ -3,6 +3,7 @@ package runner
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"github.com/XertroV/tasks/backlog_go/internal/loader"
 	"github.com/XertroV/tasks/backlog_go/internal/models"
 	"github.com/XertroV/tasks/backlog_go/internal/skills"
+	"github.com/XertroV/tasks/backlog_go/internal/updater"
 	"gopkg.in/yaml.v3"
 )
 
@@ -98,6 +100,44 @@ type commandUsageSpec struct {
 
 var currentCommandForUsage string
 
+// shouldSkipUpdateBanner reports whether the background update check is
+// suppressed for these args. Skipping fast-paths keeps `backlog --version`,
+// `backlog --help`, and the no-args invocation snappy and noise-free.
+// `upgrade` is skipped because it already surfaces the upgrade intent.
+// `BACKLOG_NO_UPDATE_CHECK=1` (or `true`/`yes`) skips unconditionally,
+// which is useful for CI environments and test fixtures.
+func shouldSkipUpdateBanner(args []string) bool {
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("BACKLOG_NO_UPDATE_CHECK"))); v != "" {
+		switch v {
+		case "1", "true", "yes", "on":
+			return true
+		}
+	}
+	if len(args) == 0 {
+		return true
+	}
+	// Args consisting *only* of help/version-style flags: skip the check.
+	onlyHelpOrVersion := true
+	for _, a := range args {
+		switch a {
+		case "-h", "--help", commands.CmdHelp, "-v", "--version", commands.CmdVersion:
+			continue
+		default:
+			onlyHelpOrVersion = false
+		}
+	}
+	if onlyHelpOrVersion {
+		return true
+	}
+	// Skip when the first positional is the upgrade command, otherwise
+	// the user reading upgrade output sees an update banner layered on top.
+	normalized := normalizeCommand(args[0])
+	if normalized == commands.CmdUpgrade {
+		return true
+	}
+	return false
+}
+
 func printUsageForCommand(command string) {
 	command = normalizeCommand(command)
 	currentCommandForUsage = command
@@ -116,6 +156,8 @@ func printUsageForCommand(command string) {
 		printDoneHelp()
 	case commands.CmdUpdate:
 		printUpdateHelp()
+	case commands.CmdUpgrade:
+		printUpgradeHelp()
 	case commands.CmdMove:
 		printMoveHelp()
 	case commands.CmdSet:
@@ -867,6 +909,18 @@ func Run(rawArgs ...string) error {
 	args = filtered
 
 	root := cmd.NewRootCommand()
+
+	// Background update detection (cached, 24h TTL). Quietly refreshes
+	// once per day and emits a one-line banner every 5th invocation when
+	// a newer release is available. Skipped for fast-path invocations
+	// (no-args, --help, --version) and during `backlog upgrade` itself.
+	if !shouldSkipUpdateBanner(args) {
+		if state, err := updater.Check(context.Background(), root.Version()); err == nil {
+			_ = updater.MaybePrintBanner(state, args, root.Version(), func(line string) {
+				fmt.Println(styleWarning(line))
+			})
+		}
+	}
 	if len(args) == 0 {
 		printStartupLogo(3, shouldUseColor())
 		fmt.Println()
@@ -992,6 +1046,8 @@ func Run(rawArgs ...string) error {
 		return runWithAutoCommit("append", payload, runAppend)
 	case commands.CmdUpdate:
 		return runUpdate(payload)
+	case commands.CmdUpgrade:
+		return runUpgrade(payload)
 	case commands.CmdUndone:
 		return runWithAutoCommit("undone", payload, runUndone)
 	case commands.CmdBenchmark:
@@ -1408,6 +1464,8 @@ func resolveCommandAlias(command string) (string, bool) {
 		return commands.CmdGrab, true
 	case commands.CmdSprint:
 		return commands.CmdGrab, true
+	case commands.CmdUpgradeAlias:
+		return commands.CmdUpgrade, true
 	default:
 		return command, false
 	}
@@ -1665,6 +1723,33 @@ func printUpdateHelp() {
 			"backlog update P1.M1.E1.T001 in_progress --priority high",
 		},
 	)
+	printUpgradeNote()
+}
+
+func printUpgradeHelp() {
+	printCommandHelp(
+		"upgrade",
+		"Download and install a newer backlog CLI release from GitHub.",
+		"backlog upgrade [options]",
+		[]string{
+			"--check            Print current vs latest and exit; do not download",
+			"--version vX.Y.Z   Target a specific release tag instead of the latest",
+			"--yes, -y          Skip the confirmation prompt",
+			"--help, -h         Show this help",
+		},
+		[]string{
+			"backlog upgrade --check",
+			"backlog upgrade --yes",
+			"backlog upgrade --version v0.2.1",
+		},
+	)
+}
+
+func printUpgradeNote() {
+	fmt.Println()
+	fmt.Println(styleMuted(
+		"Note: `backlog update` changes a task's status. To upgrade the backlog CLI itself, run `backlog upgrade`.",
+	))
 }
 
 func printMoveHelp() {
@@ -9968,6 +10053,91 @@ func runVersion(args []string) error {
 	root := cmd.NewRootCommand()
 	fmt.Printf("%s version %s\n", styleSuccess(root.Name()), root.Version())
 	return nil
+}
+
+func runUpgrade(args []string) error {
+	if parseFlag(args, "--help", "-h") {
+		printUsageForCommand(commands.CmdUpgrade)
+		return nil
+	}
+	if err := validateAllowedFlagsForUsage(commands.CmdUpgrade, args, map[string]bool{
+		"--help":    true,
+		"-h":        true,
+		"--check":   true,
+		"--yes":     true,
+		"-y":        true,
+		"--version": true,
+	}); err != nil {
+		return err
+	}
+
+	checkOnly := parseFlag(args, "--check")
+	yes := parseFlag(args, "--yes", "-y")
+	target := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--version" && i+1 < len(args) {
+			target = args[i+1]
+			break
+		}
+		if strings.HasPrefix(args[i], "--version=") {
+			target = strings.TrimPrefix(args[i], "--version=")
+			break
+		}
+	}
+
+	root := cmd.NewRootCommand()
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not locate current executable: %w", err)
+	}
+	plan, err := updater.ResolvePlan(context.Background(), root.Version(), target, exe)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%s version %s available (you have %s)\n",
+		styleSuccess(plan.Tag), styleSuccess(plan.Tag), root.Version())
+	fmt.Printf("Source repo:    %s\n", plan.SourceRepo())
+	fmt.Printf("Asset:          %s\n", plan.Asset)
+	fmt.Printf("Download URL:   %s\n", plan.URL)
+
+	if checkOnly {
+		return nil
+	}
+
+	if !updater.IsGreater(plan.Version(), root.Version()) {
+		fmt.Println(styleMuted("Already up to date."))
+		return nil
+	}
+
+	interactive := !yes && isStdinInteractive()
+	if interactive {
+		fmt.Printf("%s Replace %s with the new binary now? [y/N] ",
+			styleWarning("Confirm:"), plan.Exe)
+		var response string
+		_, scanErr := fmt.Scanln(&response)
+		if scanErr != nil || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(response)), "y") {
+			fmt.Println(styleMuted("Cancelled."))
+			return nil
+		}
+	}
+
+	if err := updater.DownloadAndApply(context.Background(), plan); err != nil {
+		return err
+	}
+	fmt.Printf("%s upgraded to %s (previous binary saved as %s)\n",
+		styleSuccess("OK:"), plan.Tag, plan.Backup)
+	return nil
+}
+
+// isStdinInteractive is a small helper to gate the confirm prompt. Defined
+// here rather than pulling in os.Stat by multiple callers.
+func isStdinInteractive() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
 }
 
 func runVelocity(args []string) error {

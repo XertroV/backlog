@@ -108,7 +108,10 @@ backlog show                         # inspect current task
 backlog done                         # mark complete, see what's unblocked
 backlog cycle                        # done + grab next in one step
 backlog dash                         # one-screen status overview
+backlog upgrade                      # update the Go CLI when a new release ships
 ```
+
+The Go CLI quietly checks GitHub Releases for a newer version once per day and prints a single yellow line at the top of every 5th invocation when an update is available. Disable the check entirely with `BACKLOG_NO_UPDATE_CHECK=1` (e.g. in CI).
 
 ## How it works
 
@@ -193,6 +196,7 @@ The engine builds a dependency graph across all tasks, computes a CCPM-style cri
 | `unclaim-stale` | Release stale in-progress claims |
 | `agents` | Print AGENTS.md snippets (`--profile short\|medium\|long\|all`) |
 | `skills install` | Install planning skills for Codex, Claude, OpenCode |
+| `upgrade` (alias: `self-update`) | Download and install a newer `backlog-go` release from GitHub (`--check` to just compare, `--version vX.Y.Z` to pin) |
 | `schema` | Show schema details for `.backlog` file formats |
 | `data export\|summary` | Data export |
 

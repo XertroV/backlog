@@ -5764,6 +5764,23 @@ func runInDirWithEnv(t *testing.T, dir string, env map[string]string, args ...st
 		t.Fatalf("failed to chdir to fixture: %v", err)
 	}
 
+	// Tests run in parallel and share the user's on-disk cache; disable
+	// the background update check so the banner never leaks into output
+	// assertions. Tests that want to exercise the banner can override
+	// BACKLOG_NO_UPDATE_CHECK explicitly.
+	if _, set := env["BACKLOG_NO_UPDATE_CHECK"]; !set {
+		if env == nil {
+			env = map[string]string{}
+		} else {
+			cp := make(map[string]string, len(env)+1)
+			for k, v := range env {
+				cp[k] = v
+			}
+			env = cp
+		}
+		env["BACKLOG_NO_UPDATE_CHECK"] = "1"
+	}
+
 	oldEnv := []struct {
 		name  string
 		value string

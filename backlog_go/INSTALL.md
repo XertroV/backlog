@@ -44,3 +44,19 @@ go test ./...
 make coverage-check
 ```
 
+## Upgrading an existing install
+
+The Go CLI will print a one-line notice when a newer release is published on
+GitHub (cached for 24h, surfaced every 5th invocation). To upgrade in-place:
+
+```bash
+backlog upgrade --check     # see current vs latest
+backlog upgrade             # download + replace + keep the old binary as *.old.<ts>
+backlog upgrade --yes       # skip the confirm prompt
+backlog upgrade --version v0.2.1   # pin to a specific tag
+```
+
+Falls back to `clankercode/backlog` if `XertroV/backlog` is unreachable, so the
+recent repo-move plans won't strand users. Disable the background check in
+constrained environments with `BACKLOG_NO_UPDATE_CHECK=1`.
+

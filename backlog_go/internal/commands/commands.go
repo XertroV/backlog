@@ -65,4 +65,6 @@ const (
 	CmdSprint        = "sprint"
 	CmdUnknown       = "unknown"
 	CmdVelocity      = "velocity"
+	CmdUpgrade       = "upgrade"
+	CmdUpgradeAlias  = "self-update"
 )
