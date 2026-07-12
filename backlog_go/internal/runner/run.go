@@ -952,6 +952,14 @@ func Run(rawArgs ...string) error {
 		return nil
 	}
 
+	// Refuse mutating commands when invoked from a git worktree. Read-only
+	// commands (list/show/next/check/schema/help/howto/etc.) pass through
+	// so agents can inspect state from a worktree before merging back.
+	// Detection is lock-free (os.Stat + os.ReadFile on .git only).
+	if err := CheckWorktreeGuard(command, payload); err != nil {
+		return err
+	}
+
 	switch command {
 	case commands.CmdInit:
 		return runInit(payload)
