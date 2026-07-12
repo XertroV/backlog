@@ -53,7 +53,7 @@ GitHub (cached for 24h, surfaced every 5th invocation). To upgrade in-place:
 backlog upgrade --check     # see current vs latest
 backlog upgrade             # download + replace + keep the old binary as *.old.<ts>
 backlog upgrade --yes       # skip the confirm prompt
-backlog upgrade --version v0.2.1   # pin to a specific tag
+backlog upgrade --version v0.3.0   # pin to a specific tag
 ```
 
 Falls back to `clankercode/backlog` if `XertroV/backlog` is unreachable, so the
