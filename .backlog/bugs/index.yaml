@@ -18,3 +18,4 @@ bugs:
     - file: B017-add-a-way-to-modify-existing-t.todo
     - file: B018-bl-edit-x-should-autocommit-af.todo
     - file: B019-backlogs-logo-doesnt-render-ri.todo
+    - file: B020-when-git-commits-are-made-the.todo
