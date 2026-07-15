@@ -39,3 +39,11 @@ warn when an invalid file is detected. show and claim should do validity checks 
 - Idea has been decomposed into concrete backlog work items.
 - New items include clear acceptance criteria and dependencies.
 - This idea intake is updated with created IDs and marked done.
+
+## Decomposition Record
+
+Created work items:
+- P2.M1.E1.T001 — define the warning contract and parity fixtures (2h).
+- P2.M1.E1.T002 — implement show/claim warnings in Go, Python, and TypeScript (8h; depends on T001).
+
+Placement rationale: P1 is complete and this is a new cross-client data-integrity capability, so it belongs in P2 “Data integrity diagnostics.”
