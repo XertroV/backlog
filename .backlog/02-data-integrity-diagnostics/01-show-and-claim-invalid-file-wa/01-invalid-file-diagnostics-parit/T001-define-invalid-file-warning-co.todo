@@ -1,17 +1,18 @@
 ---
+claimed_at: "2026-07-15T06:28:29Z"
+claimed_by: cli-user
+completed_at: null
 complexity: medium
 created_at: "2026-07-15T05:07:16Z"
 depends_on: []
 estimate_hours: 2
 id: P2.M1.E1.T001
 priority: medium
-status: pending
-tags:
-    - diagnostics
-    - parity
-    - testing
+started_at: "2026-07-15T06:28:29Z"
+status: in_progress
+tags: []
 title: Define invalid-file warning contract and parity fixtures
-updated_at: "2026-07-15T05:07:16Z"
+updated_at: "2026-07-15T06:28:29Z"
 ---
 Establish the observable contract for invalid backlog files used by show and claim.
 
