@@ -18,7 +18,7 @@ tasks:
       file: T001-define-invalid-file-warning-co.todo
       id: T001
       priority: medium
-      status: in_progress
+      status: done
       tags: []
       title: Define invalid-file warning contract and parity fixtures
     - complexity: medium
