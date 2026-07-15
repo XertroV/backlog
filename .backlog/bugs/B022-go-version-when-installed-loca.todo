@@ -1,14 +1,18 @@
 ---
+claimed_at: "2026-07-15T05:50:26Z"
+claimed_by: cli-user
+completed_at: null
 complexity: medium
 created_at: "2026-07-15T05:50:07Z"
 depends_on: []
 estimate_hours: 1
 id: B022
 priority: high
-status: pending
+started_at: "2026-07-15T05:50:26Z"
+status: in_progress
 tags: []
 title: go version when installed locally always has v0.1.0. it would be more reasonable to give it v0.0.0 if it doesnt have the release version number attached
-updated_at: "2026-07-15T05:50:07Z"
+updated_at: "2026-07-15T05:50:26Z"
 ---
 
 go version when installed locally always has v0.1.0. it would be more reasonable to give it v0.0.0 if it doesnt have the release version number attached
