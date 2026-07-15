@@ -1,38 +1,38 @@
-id: P1.M3.E4
-name: Output contract and formatting parity
-status: done
-estimate_hours: 20.0
 complexity: high
 depends_on: []
+estimate_hours: 20
+id: P1.M3.E4
 locked: false
-tasks:
-- id: T001
-  file: T001-implement-stable-json-outputs.todo
-  title: Implement stable --json outputs across command matrix
-  status: pending
-  estimate_hours: 9.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-align-error-messages-for-broke.todo
-  title: Align error messages for broken parse/deps/locking
-  status: pending
-  estimate_hours: 6.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-add-parity-snapshot-tests-for.todo
-  title: Add parity snapshot tests for machine outputs
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Output contract and formatting parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 9
+      file: T001-implement-stable-json-outputs.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Implement stable --json outputs across command matrix
+    - complexity: high
+      depends_on: []
+      estimate_hours: 6
+      file: T002-align-error-messages-for-broke.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Align error messages for broken parse/deps/locking
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T003-add-parity-snapshot-tests-for.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Add parity snapshot tests for machine outputs

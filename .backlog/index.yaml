@@ -1,12 +1,7 @@
 critical_path:
-    - P1.M2.E3.T001
-    - P1.M2.E3.T002
-    - P1.M2.E3.T003
-    - P1.M3.E1.T001
-    - P1.M3.E1.T002
-    - P1.M3.E1.T003
+    - I003
 description: ""
-next_available: null
+next_available: P2.M1.E1.T001
 phases:
     - depends_on: []
       description: Implement a standalone Go implementation of the backlog CLI with parity and migration parity to Python/TypeScript.
@@ -31,9 +26,8 @@ phases:
 project: The Backlogs
 stats:
     blocked: 0
-    done: 0
-    in_progress: 0
-    pending: 42
-    total_estimate_hours: 240
-    total_tasks: 42
+    done: 65
+    in_progress: 1
+    pending: 4
+    total_tasks: 70
 timeline_weeks: 0

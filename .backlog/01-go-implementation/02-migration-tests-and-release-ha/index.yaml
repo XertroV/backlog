@@ -1,52 +1,50 @@
-id: P1.M4
-name: Migration, Tests, and Release Hardening
-status: done
-estimate_hours: 35.0
 complexity: high
 depends_on: []
-locked: false
 epics:
-- id: E1
-  name: Go module docs and release entrypoints
-  path: 01-go-module-docs-and-release-ent
-  status: done
-  estimate_hours: 10.0
-  complexity: high
-  depends_on: []
-  description: Create README for backlog_go, install script, and binary entrypoint
-    docs.
-  locked: false
-- id: E2
-  name: Golden fixtures and parity test harness
-  path: 02-golden-fixtures-and-parity-tes
-  status: done
-  estimate_hours: 12.0
-  complexity: high
-  depends_on: []
-  description: Build fixture-driven tests and cross-implementation comparison checks.
-  locked: false
-- id: E3
-  name: Cross-implementation parity criteria and release gating
-  path: 03-cross-implementation-parity-cr
-  status: done
-  estimate_hours: 8.0
-  complexity: high
-  depends_on: []
-  description: Define parity acceptance criteria and automated checks for CI gating.
-  locked: false
-- id: E4
-  name: Versioning and migration handoff
-  path: 04-versioning-and-migration-hando
-  status: done
-  estimate_hours: 5.0
-  complexity: high
-  depends_on: []
-  description: Finalize release tagging, release notes, and transition notes from
-    TS/Python.
-  locked: false
+    - complexity: high
+      depends_on: []
+      description: Create README for backlog_go, install script, and binary entrypoint docs.
+      estimate_hours: 10
+      id: E1
+      locked: false
+      name: Go module docs and release entrypoints
+      path: 01-go-module-docs-and-release-ent
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Build fixture-driven tests and cross-implementation comparison checks.
+      estimate_hours: 12
+      id: E2
+      locked: false
+      name: Golden fixtures and parity test harness
+      path: 02-golden-fixtures-and-parity-tes
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Define parity acceptance criteria and automated checks for CI gating.
+      estimate_hours: 8
+      id: E3
+      locked: false
+      name: Cross-implementation parity criteria and release gating
+      path: 03-cross-implementation-parity-cr
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Finalize release tagging, release notes, and transition notes from TS/Python.
+      estimate_hours: 5
+      id: E4
+      locked: false
+      name: Versioning and migration handoff
+      path: 04-versioning-and-migration-hando
+      status: done
+estimate_hours: 35
+id: P1.M4
+locked: false
+name: Migration, Tests, and Release Hardening
 stats:
-  total_tasks: 12
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 12
+    blocked: 0
+    done: 12
+    in_progress: 0
+    pending: 0
+    total_tasks: 12
+status: done

@@ -1,38 +1,38 @@
-id: P1.M3.E1
-name: Core workflow command parity
-status: done
-estimate_hours: 24.0
 complexity: high
 depends_on: []
+estimate_hours: 24
+id: P1.M3.E1
 locked: false
-tasks:
-- id: T001
-  file: T001-implement-init-list-ls-show-co.todo
-  title: Implement init/list/ls/ show command handlers
-  status: pending
-  estimate_hours: 8.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-grab-claim-done-work.todo
-  title: Implement grab/claim/done/work cycle flow
-  status: pending
-  estimate_hours: 10.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-implement-next-preview-and-con.todo
-  title: Implement next/preview and context switching
-  status: pending
-  estimate_hours: 6.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Core workflow command parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 8
+      file: T001-implement-init-list-ls-show-co.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Implement init/list/ls/ show command handlers
+    - complexity: high
+      depends_on: []
+      estimate_hours: 10
+      file: T002-implement-grab-claim-done-work.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement grab/claim/done/work cycle flow
+    - complexity: high
+      depends_on: []
+      estimate_hours: 6
+      file: T003-implement-next-preview-and-con.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Implement next/preview and context switching

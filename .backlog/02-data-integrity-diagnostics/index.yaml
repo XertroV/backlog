@@ -14,5 +14,11 @@ milestones:
       path: 01-show-and-claim-invalid-file-wa
       status: pending
 name: Data integrity diagnostics
+stats:
+    blocked: 0
+    done: 0
+    in_progress: 0
+    pending: 2
+    total_tasks: 2
 status: pending
 weeks: 1

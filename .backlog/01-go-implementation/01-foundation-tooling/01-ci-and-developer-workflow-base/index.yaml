@@ -1,38 +1,38 @@
-id: P1.M1.E1
-name: CI and developer workflow baseline
-status: done
-estimate_hours: 12.0
 complexity: high
 depends_on: []
+estimate_hours: 12
+id: P1.M1.E1
 locked: false
-tasks:
-- id: T001
-  file: T001-create-baseline-go-module-tool.todo
-  title: Create baseline Go module tooling
-  status: pending
-  estimate_hours: 2.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-add-ci-workflow-for-gofmt-test.todo
-  title: Add CI workflow for gofmt/test/coverage
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-standardize-pre-commit-and-cod.todo
-  title: Standardize pre-commit and code style checks
-  status: pending
-  estimate_hours: 2.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: CI and developer workflow baseline
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 2
+      file: T001-create-baseline-go-module-tool.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Create baseline Go module tooling
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T002-add-ci-workflow-for-gofmt-test.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Add CI workflow for gofmt/test/coverage
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 2
+      file: T003-standardize-pre-commit-and-cod.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Standardize pre-commit and code style checks

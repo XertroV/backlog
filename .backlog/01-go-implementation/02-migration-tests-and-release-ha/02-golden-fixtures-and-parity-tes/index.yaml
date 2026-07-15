@@ -1,38 +1,38 @@
-id: P1.M4.E2
-name: Golden fixtures and parity test harness
-status: done
-estimate_hours: 12.0
 complexity: high
 depends_on: []
+estimate_hours: 12
+id: P1.M4.E2
 locked: false
-tasks:
-- id: T001
-  file: T001-create-canonical-fixture-set-f.todo
-  title: Create canonical fixture set for go loader parity
-  status: pending
-  estimate_hours: 5.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-go-specific-fixture.todo
-  title: Implement Go-specific fixture test harness
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-cross-validate-outputs-with-ts.todo
-  title: Cross-validate outputs with TS/Python on fixtures
-  status: pending
-  estimate_hours: 3.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Golden fixtures and parity test harness
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 5
+      file: T001-create-canonical-fixture-set-f.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Create canonical fixture set for go loader parity
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T002-implement-go-specific-fixture.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement Go-specific fixture test harness
+    - complexity: high
+      depends_on: []
+      estimate_hours: 3
+      file: T003-cross-validate-outputs-with-ts.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Cross-validate outputs with TS/Python on fixtures

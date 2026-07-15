@@ -1,44 +1,41 @@
-id: P1.M2
-name: Domain Model and Loader Parity
-status: done
-estimate_hours: 55.0
 complexity: high
 depends_on: []
-locked: false
 epics:
-- id: E1
-  name: Models parity
-  path: 01-models-parity
-  status: done
-  estimate_hours: 16.0
-  complexity: high
-  depends_on: []
-  description: Port Python status/priority/complexity/task-path models and validation
-    semantics.
-  locked: false
-- id: E2
-  name: Loader and YAML parsing parity
-  path: 02-loader-and-yaml-parsing-parity
-  status: done
-  estimate_hours: 20.0
-  complexity: high
-  depends_on: []
-  description: Port loader pipeline for index + todo/frontmatter parsing with missing-file
-    and malformed-content handling.
-  locked: false
-- id: E3
-  name: Dependency graph and critical path parity
-  path: 03-dependency-graph-and-critical
-  status: done
-  estimate_hours: 18.0
-  complexity: high
-  depends_on: []
-  description: Implement task dependency model, critical path ordering, and preview
-    eligibility checks.
-  locked: false
+    - complexity: high
+      depends_on: []
+      description: Port Python status/priority/complexity/task-path models and validation semantics.
+      estimate_hours: 16
+      id: E1
+      locked: false
+      name: Models parity
+      path: 01-models-parity
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Port loader pipeline for index + todo/frontmatter parsing with missing-file and malformed-content handling.
+      estimate_hours: 20
+      id: E2
+      locked: false
+      name: Loader and YAML parsing parity
+      path: 02-loader-and-yaml-parsing-parity
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Implement task dependency model, critical path ordering, and preview eligibility checks.
+      estimate_hours: 18
+      id: E3
+      locked: false
+      name: Dependency graph and critical path parity
+      path: 03-dependency-graph-and-critical
+      status: done
+estimate_hours: 55
+id: P1.M2
+locked: false
+name: Domain Model and Loader Parity
 stats:
-  total_tasks: 9
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 9
+    blocked: 0
+    done: 9
+    in_progress: 0
+    pending: 0
+    total_tasks: 9
+status: done

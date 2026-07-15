@@ -1,38 +1,38 @@
-id: P1.M4.E3
-name: Cross-implementation parity criteria and release gating
-status: done
-estimate_hours: 8.0
 complexity: high
 depends_on: []
+estimate_hours: 8
+id: P1.M4.E3
 locked: false
-tasks:
-- id: T001
-  file: T001-draft-explicit-parity-acceptan.todo
-  title: Draft explicit parity acceptance checklist
-  status: pending
-  estimate_hours: 3.0
-  complexity: medium
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-set-ci-gating-thresholds-and-f.todo
-  title: Set CI gating thresholds and fail conditions
-  status: pending
-  estimate_hours: 3.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-add-release-checklist-and-veri.todo
-  title: Add release checklist and verification steps
-  status: pending
-  estimate_hours: 2.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: Cross-implementation parity criteria and release gating
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 3
+      file: T001-draft-explicit-parity-acceptan.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Draft explicit parity acceptance checklist
+    - complexity: high
+      depends_on: []
+      estimate_hours: 3
+      file: T002-set-ci-gating-thresholds-and-f.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Set CI gating thresholds and fail conditions
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 2
+      file: T003-add-release-checklist-and-veri.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Add release checklist and verification steps

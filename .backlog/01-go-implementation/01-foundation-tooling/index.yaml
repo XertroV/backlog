@@ -1,43 +1,41 @@
-id: P1.M1
-name: Foundation & Tooling
-status: done
-estimate_hours: 40.0
 complexity: high
 depends_on: []
-locked: false
 epics:
-- id: E1
-  name: CI and developer workflow baseline
-  path: 01-ci-and-developer-workflow-base
-  status: done
-  estimate_hours: 12.0
-  complexity: high
-  depends_on: []
-  description: Set up gofmt, lint, test, and parity task checks for local development.
-  locked: false
-- id: E2
-  name: Project bootstrap and module layout
-  path: 02-project-bootstrap-and-module-l
-  status: done
-  estimate_hours: 16.0
-  complexity: high
-  depends_on: []
-  description: Initialize go module, CLI command hierarchy, and shared internal package
-    structure.
-  locked: false
-- id: E3
-  name: Backlog data layout and path conventions
-  path: 03-backlog-data-layout-and-path-c
-  status: done
-  estimate_hours: 12.0
-  complexity: high
-  depends_on: []
-  description: Implement path conventions for phases/milestones/epics/tasks and migration-safe
-    directory naming.
-  locked: false
+    - complexity: high
+      depends_on: []
+      description: Set up gofmt, lint, test, and parity task checks for local development.
+      estimate_hours: 12
+      id: E1
+      locked: false
+      name: CI and developer workflow baseline
+      path: 01-ci-and-developer-workflow-base
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Initialize go module, CLI command hierarchy, and shared internal package structure.
+      estimate_hours: 16
+      id: E2
+      locked: false
+      name: Project bootstrap and module layout
+      path: 02-project-bootstrap-and-module-l
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Implement path conventions for phases/milestones/epics/tasks and migration-safe directory naming.
+      estimate_hours: 12
+      id: E3
+      locked: false
+      name: Backlog data layout and path conventions
+      path: 03-backlog-data-layout-and-path-c
+      status: done
+estimate_hours: 40
+id: P1.M1
+locked: false
+name: Foundation & Tooling
 stats:
-  total_tasks: 9
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 9
+    blocked: 0
+    done: 9
+    in_progress: 0
+    pending: 0
+    total_tasks: 9
+status: done

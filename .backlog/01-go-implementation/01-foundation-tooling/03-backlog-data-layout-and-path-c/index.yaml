@@ -1,38 +1,38 @@
-id: P1.M1.E3
-name: Backlog data layout and path conventions
-status: done
-estimate_hours: 12.0
 complexity: high
 depends_on: []
+estimate_hours: 12
+id: P1.M1.E3
 locked: false
-tasks:
-- id: T001
-  file: T001-implement-task-path-parser-and.todo
-  title: Implement task-path parser and ID helpers
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-filesystem-numbering.todo
-  title: Implement filesystem numbering and slug helpers
-  status: pending
-  estimate_hours: 3.0
-  complexity: medium
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-create-directory-migration-saf.todo
-  title: Create directory migration-safe path strategy
-  status: pending
-  estimate_hours: 5.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Backlog data layout and path conventions
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T001-implement-task-path-parser-and.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Implement task-path parser and ID helpers
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 3
+      file: T002-implement-filesystem-numbering.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement filesystem numbering and slug helpers
+    - complexity: high
+      depends_on: []
+      estimate_hours: 5
+      file: T003-create-directory-migration-saf.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Create directory migration-safe path strategy

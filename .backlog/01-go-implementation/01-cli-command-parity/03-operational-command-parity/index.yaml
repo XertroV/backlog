@@ -1,38 +1,38 @@
-id: P1.M3.E3
-name: Operational command parity
-status: done
-estimate_hours: 32.0
 complexity: high
 depends_on: []
+estimate_hours: 32
+id: P1.M3.E3
 locked: false
-tasks:
-- id: T001
-  file: T001-implement-search-and-check-com.todo
-  title: Implement search and check commands
-  status: pending
-  estimate_hours: 8.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-blockers-why-report.todo
-  title: Implement blockers/why/report/timeline outputs
-  status: pending
-  estimate_hours: 8.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-implement-log-tree-dash-previe.todo
-  title: Implement log/tree/dash/preview/admin UX outputs
-  status: pending
-  estimate_hours: 8.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: Operational command parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 8
+      file: T001-implement-search-and-check-com.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Implement search and check commands
+    - complexity: high
+      depends_on: []
+      estimate_hours: 8
+      file: T002-implement-blockers-why-report.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement blockers/why/report/timeline outputs
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 8
+      file: T003-implement-log-tree-dash-previe.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Implement log/tree/dash/preview/admin UX outputs

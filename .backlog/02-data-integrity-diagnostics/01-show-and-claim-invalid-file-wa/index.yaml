@@ -14,4 +14,10 @@ estimate_hours: 10
 id: P2.M1
 locked: false
 name: Show and claim invalid-file warnings
+stats:
+    blocked: 0
+    done: 0
+    in_progress: 0
+    pending: 2
+    total_tasks: 2
 status: pending

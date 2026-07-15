@@ -1,38 +1,38 @@
-id: P1.M2.E3
-name: Dependency graph and critical path parity
-status: done
-estimate_hours: 18.0
 complexity: high
 depends_on: []
+estimate_hours: 18
+id: P1.M2.E3
 locked: false
-tasks:
-- id: T001
-  file: T001-build-dependency-graph-resolut.todo
-  title: Build dependency graph resolution engine
-  status: pending
-  estimate_hours: 6.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-critical-path-and-av.todo
-  title: Implement critical path and availability filtering
-  status: pending
-  estimate_hours: 6.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-add-blockers-why-style-reasoni.todo
-  title: Add blockers/why style reasoning helpers
-  status: pending
-  estimate_hours: 3.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: Dependency graph and critical path parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 6
+      file: T001-build-dependency-graph-resolut.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Build dependency graph resolution engine
+    - complexity: high
+      depends_on: []
+      estimate_hours: 6
+      file: T002-implement-critical-path-and-av.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement critical path and availability filtering
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 3
+      file: T003-add-blockers-why-style-reasoni.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Add blockers/why style reasoning helpers

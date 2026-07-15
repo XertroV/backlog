@@ -1,38 +1,38 @@
-id: P1.M2.E1
-name: Models parity
-status: done
-estimate_hours: 16.0
 complexity: high
 depends_on: []
+estimate_hours: 16
+id: P1.M2.E1
 locked: false
-tasks:
-- id: T001
-  file: T001-port-status-priority-complexit.todo
-  title: Port status/priority/complexity enums
-  status: pending
-  estimate_hours: 4.0
-  complexity: medium
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-taskpath-api-with-de.todo
-  title: Implement TaskPath API with depth/is-type helpers
-  status: pending
-  estimate_hours: 5.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-implement-aggregate-models-pha.todo
-  title: Implement aggregate models (Phase, Milestone, Epic, TaskTree)
-  status: pending
-  estimate_hours: 7.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Models parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 4
+      file: T001-port-status-priority-complexit.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Port status/priority/complexity enums
+    - complexity: high
+      depends_on: []
+      estimate_hours: 5
+      file: T002-implement-taskpath-api-with-de.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement TaskPath API with depth/is-type helpers
+    - complexity: high
+      depends_on: []
+      estimate_hours: 7
+      file: T003-implement-aggregate-models-pha.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Implement aggregate models (Phase, Milestone, Epic, TaskTree)

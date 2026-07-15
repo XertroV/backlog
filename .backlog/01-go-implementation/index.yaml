@@ -1,58 +1,54 @@
-id: P1
-name: Go implementation
-status: done
-locked: true
-weeks: 6
-estimate_hours: 240.0
 complexity: medium
 depends_on: []
+estimate_hours: 240
+id: P1
+locked: true
 milestones:
-- id: M1
-  name: Foundation & Tooling
-  path: 01-foundation-tooling
-  status: done
-  estimate_hours: 40.0
-  complexity: high
-  depends_on: []
-  description: Establish project layout, toolchain, command skeleton, and baseline
-    automation.
-  locked: false
-- id: M2
-  name: Domain Model and Loader Parity
-  path: 01-domain-model-and-loader-parity
-  status: done
-  estimate_hours: 55.0
-  complexity: high
-  depends_on:
-  - P1.M1
-  description: Port domain model and /YAML loading behavior with compatible ID and
-    path handling.
-  locked: false
-- id: M3
-  name: CLI Command Parity
-  path: 01-cli-command-parity
-  status: done
-  estimate_hours: 110.0
-  complexity: high
-  depends_on:
-  - P1.M2
-  description: Implement CLI commands and behavior required for full day-to-day usage,
-    including workflows and checks.
-  locked: false
-- id: M4
-  name: Migration, Tests, and Release Hardening
-  path: 02-migration-tests-and-release-ha
-  status: done
-  estimate_hours: 35.0
-  complexity: high
-  depends_on:
-  - P1.M3
-  description: Finalize go module docs, release path, parity checks, and stable operational
-    docs/testing.
-  locked: false
+    - complexity: high
+      depends_on: []
+      description: Establish project layout, toolchain, command skeleton, and baseline automation.
+      estimate_hours: 40
+      id: M1
+      locked: false
+      name: Foundation & Tooling
+      path: 01-foundation-tooling
+      status: done
+    - complexity: high
+      depends_on:
+        - P1.M1
+      description: Port domain model and /YAML loading behavior with compatible ID and path handling.
+      estimate_hours: 55
+      id: M2
+      locked: false
+      name: Domain Model and Loader Parity
+      path: 01-domain-model-and-loader-parity
+      status: done
+    - complexity: high
+      depends_on:
+        - P1.M2
+      description: Implement CLI commands and behavior required for full day-to-day usage, including workflows and checks.
+      estimate_hours: 110
+      id: M3
+      locked: false
+      name: CLI Command Parity
+      path: 01-cli-command-parity
+      status: done
+    - complexity: high
+      depends_on:
+        - P1.M3
+      description: Finalize go module docs, release path, parity checks, and stable operational docs/testing.
+      estimate_hours: 35
+      id: M4
+      locked: false
+      name: Migration, Tests, and Release Hardening
+      path: 02-migration-tests-and-release-ha
+      status: done
+name: Go implementation
 stats:
-  total_tasks: 42
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 42
+    blocked: 0
+    done: 42
+    in_progress: 0
+    pending: 0
+    total_tasks: 42
+status: done
+weeks: 6

@@ -1,38 +1,38 @@
-id: P1.M1.E2
-name: Project bootstrap and module layout
-status: done
-estimate_hours: 16.0
 complexity: high
 depends_on: []
+estimate_hours: 16
+id: P1.M1.E2
 locked: false
-tasks:
-- id: T001
-  file: T001-bootstrap-go-module-and-comman.todo
-  title: Bootstrap go module and command entrypoints
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-create-internal-package-scaffo.todo
-  title: Create internal package scaffolding
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-add-shared-configuration-and-c.todo
-  title: Add shared configuration and context helpers
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Project bootstrap and module layout
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T001-bootstrap-go-module-and-comman.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Bootstrap go module and command entrypoints
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T002-create-internal-package-scaffo.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Create internal package scaffolding
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T003-add-shared-configuration-and-c.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Add shared configuration and context helpers

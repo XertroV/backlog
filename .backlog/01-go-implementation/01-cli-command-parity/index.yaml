@@ -1,54 +1,50 @@
-id: P1.M3
-name: CLI Command Parity
-status: done
-estimate_hours: 110.0
 complexity: high
 depends_on: []
-locked: false
 epics:
-- id: E1
-  name: Core workflow command parity
-  path: 01-core-workflow-command-parity
-  status: done
-  estimate_hours: 24.0
-  complexity: high
-  depends_on: []
-  description: Implement init, ls/list, show, grab/claim, done, work, next, preview,
-    and set for day-to-day usage.
-  locked: false
-- id: E2
-  name: Edit and modeling command parity
-  path: 02-edit-and-modeling-command-pari
-  status: done
-  estimate_hours: 20.0
-  complexity: high
-  depends_on: []
-  description: Implement add, add-epic, add-milestone, add-phase, move, update, blocked/unclaim,
-    and status helpers.
-  locked: false
-- id: E3
-  name: Operational command parity
-  path: 03-operational-command-parity
-  status: done
-  estimate_hours: 32.0
-  complexity: high
-  depends_on: []
-  description: Implement search, check, blockers, why, report, log, tree, timeline,
-    sync, and review/helpful admin commands.
-  locked: false
-- id: E4
-  name: Output contract and formatting parity
-  path: 04-output-contract-and-formatting
-  status: done
-  estimate_hours: 20.0
-  complexity: high
-  depends_on: []
-  description: Guarantee text/JSON output keys, ordering, and error messages are consistent
-    with existing CLIs.
-  locked: false
+    - complexity: high
+      depends_on: []
+      description: Implement init, ls/list, show, grab/claim, done, work, next, preview, and set for day-to-day usage.
+      estimate_hours: 24
+      id: E1
+      locked: false
+      name: Core workflow command parity
+      path: 01-core-workflow-command-parity
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Implement add, add-epic, add-milestone, add-phase, move, update, blocked/unclaim, and status helpers.
+      estimate_hours: 20
+      id: E2
+      locked: false
+      name: Edit and modeling command parity
+      path: 02-edit-and-modeling-command-pari
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Implement search, check, blockers, why, report, log, tree, timeline, sync, and review/helpful admin commands.
+      estimate_hours: 32
+      id: E3
+      locked: false
+      name: Operational command parity
+      path: 03-operational-command-parity
+      status: done
+    - complexity: high
+      depends_on: []
+      description: Guarantee text/JSON output keys, ordering, and error messages are consistent with existing CLIs.
+      estimate_hours: 20
+      id: E4
+      locked: false
+      name: Output contract and formatting parity
+      path: 04-output-contract-and-formatting
+      status: done
+estimate_hours: 110
+id: P1.M3
+locked: false
+name: CLI Command Parity
 stats:
-  total_tasks: 12
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 12
+    blocked: 0
+    done: 12
+    in_progress: 0
+    pending: 0
+    total_tasks: 12
+status: done

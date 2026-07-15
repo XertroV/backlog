@@ -4,6 +4,12 @@ estimate_hours: 10
 id: P2.M1.E1
 locked: false
 name: Invalid-file diagnostics parity
+stats:
+    blocked: 0
+    done: 0
+    in_progress: 0
+    pending: 2
+    total: 2
 status: pending
 tasks:
     - complexity: medium

@@ -1,38 +1,38 @@
-id: P1.M2.E2
-name: Loader and YAML parsing parity
-status: done
-estimate_hours: 20.0
 complexity: high
 depends_on: []
+estimate_hours: 20
+id: P1.M2.E2
 locked: false
-tasks:
-- id: T001
-  file: T001-port-root-phase-milestone-epic.todo
-  title: Port root/phase/milestone/epic loading
-  status: pending
-  estimate_hours: 6.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-todo-frontmatter-par.todo
-  title: Implement todo frontmatter parsing and defaults
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-handle-missing-files-and-legac.todo
-  title: Handle missing files and legacy key compatibility
-  status: pending
-  estimate_hours: 4.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: Loader and YAML parsing parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 6
+      file: T001-port-root-phase-milestone-epic.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Port root/phase/milestone/epic loading
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T002-implement-todo-frontmatter-par.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement todo frontmatter parsing and defaults
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 4
+      file: T003-handle-missing-files-and-legac.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Handle missing files and legacy key compatibility

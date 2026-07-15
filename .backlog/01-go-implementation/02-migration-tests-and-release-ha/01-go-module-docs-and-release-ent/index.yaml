@@ -1,38 +1,38 @@
-id: P1.M4.E1
-name: Go module docs and release entrypoints
-status: done
-estimate_hours: 10.0
 complexity: high
 depends_on: []
+estimate_hours: 10
+id: P1.M4.E1
 locked: false
-tasks:
-- id: T001
-  file: T001-create-backlog-go-readme-and-q.todo
-  title: Create backlog_go README and quickstart
-  status: pending
-  estimate_hours: 3.0
-  complexity: medium
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-add-install-run-build-docs-and.todo
-  title: Add install/run/build docs and examples
-  status: pending
-  estimate_hours: 4.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-document-command-parity-matrix.todo
-  title: Document command parity matrix and limitations
-  status: pending
-  estimate_hours: 3.0
-  complexity: medium
-  priority: medium
-  depends_on: []
+name: Go module docs and release entrypoints
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 3
+      file: T001-create-backlog-go-readme-and-q.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Create backlog_go README and quickstart
+    - complexity: high
+      depends_on: []
+      estimate_hours: 4
+      file: T002-add-install-run-build-docs-and.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Add install/run/build docs and examples
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 3
+      file: T003-document-command-parity-matrix.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Document command parity matrix and limitations

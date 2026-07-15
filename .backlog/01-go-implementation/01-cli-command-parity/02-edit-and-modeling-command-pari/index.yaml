@@ -1,38 +1,38 @@
-id: P1.M3.E2
-name: Edit and modeling command parity
-status: done
-estimate_hours: 20.0
 complexity: high
 depends_on: []
+estimate_hours: 20
+id: P1.M3.E2
 locked: false
-tasks:
-- id: T001
-  file: T001-implement-add-add-epic-add-mil.todo
-  title: Implement add/add-epic/add-milestone commands
-  status: pending
-  estimate_hours: 7.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T002
-  file: T002-implement-add-phase-set-status.todo
-  title: Implement add-phase/set/status/undone/update flows
-  status: pending
-  estimate_hours: 8.0
-  complexity: high
-  priority: medium
-  depends_on: []
-- id: T003
-  file: T003-implement-move-unclaim-sync-an.todo
-  title: Implement move/unclaim/sync and claim guards
-  status: pending
-  estimate_hours: 9.0
-  complexity: high
-  priority: medium
-  depends_on: []
+name: Edit and modeling command parity
 stats:
-  total: 3
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 3
+    blocked: 0
+    done: 3
+    in_progress: 0
+    pending: 0
+    total: 3
+status: done
+tasks:
+    - complexity: high
+      depends_on: []
+      estimate_hours: 7
+      file: T001-implement-add-add-epic-add-mil.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Implement add/add-epic/add-milestone commands
+    - complexity: high
+      depends_on: []
+      estimate_hours: 8
+      file: T002-implement-add-phase-set-status.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Implement add-phase/set/status/undone/update flows
+    - complexity: high
+      depends_on: []
+      estimate_hours: 9
+      file: T003-implement-move-unclaim-sync-an.todo
+      id: T003
+      priority: medium
+      status: pending
+      title: Implement move/unclaim/sync and claim guards
