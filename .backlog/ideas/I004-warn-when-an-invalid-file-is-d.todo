@@ -1,15 +1,17 @@
 ---
+claimed_at: "2026-07-15T05:05:34Z"
+claimed_by: cli-user
 completed_at: null
 complexity: medium
 depends_on: []
 estimate_hours: 10
 id: I004
 priority: medium
-started_at: "2026-03-17T19:16:28Z"
-status: pending
+started_at: "2026-07-15T05:05:34Z"
+status: in_progress
 tags: []
 title: warn when an invalid file is detected. show and claim should do validity checks on the file and print any warnings encountered (eg a file can be valid for claiming but isn't in the index).
-updated_at: "2026-07-15T04:01:32Z"
+updated_at: "2026-07-15T05:05:34Z"
 ---
 
 # Original Idea
