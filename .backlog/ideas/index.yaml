@@ -16,7 +16,7 @@ ideas:
       file: I003-add-support-repo-level-config.todo
       id: I003
       priority: medium
-      status: in_progress
+      status: pending
       tags: []
       title: Add support (repo level config) for a way of numbering phases, milestones, epics, tasks, bugs, ideas, and fixes so that they work in parallel git branches and can be safely merged. Right now, they are sequential and it requires adding items in series or resolving conflicts. The idea of this alternate numbering method is to use random values instead (hex probably, like `T-8f47d`; 5 chars should be enough to avoid collisions). When matching, we want to be able to match assuming a prefix, like P-f8.M.E-9.T-12 should match a task with full task ID like P-f8000.M-00000.E-90000.T-12000 (any hex char where the zeros are). Also, the whole task id is selected when double clicked so we need to use valid charset for that.
     - complexity: medium

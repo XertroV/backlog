@@ -1,6 +1,4 @@
 ---
-claimed_at: "2026-03-16T04:28:04Z"
-claimed_by: cli-user
 completed_at: null
 complexity: medium
 depends_on: []
@@ -8,9 +6,10 @@ estimate_hours: 10
 id: I003
 priority: medium
 started_at: "2026-03-16T04:28:04Z"
-status: in_progress
+status: pending
 tags: []
 title: Add support (repo level config) for a way of numbering phases, milestones, epics, tasks, bugs, ideas, and fixes so that they work in parallel git branches and can be safely merged. Right now, they are sequential and it requires adding items in series or resolving conflicts. The idea of this alternate numbering method is to use random values instead (hex probably, like `T-8f47d`; 5 chars should be enough to avoid collisions). When matching, we want to be able to match assuming a prefix, like P-f8.M.E-9.T-12 should match a task with full task ID like P-f8000.M-00000.E-90000.T-12000 (any hex char where the zeros are). Also, the whole task id is selected when double clicked so we need to use valid charset for that.
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 # Original Idea
