@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-03-16T18:31:34Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 173369.8673116939
 estimate_hours: 1
 id: B011
 priority: high
 started_at: "2026-03-16T18:31:34Z"
-status: in_progress
+status: done
 tags: []
 title: go client should have the pretty logo like python client.
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 go client should have the pretty logo like python client.

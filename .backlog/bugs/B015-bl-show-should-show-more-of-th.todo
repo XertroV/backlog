@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-03-16T03:42:33Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 174258.88398827607
 estimate_hours: 1
 id: B015
 priority: high
 started_at: "2026-03-16T03:42:33Z"
-status: in_progress
+status: done
 tags: []
 title: bl show should show more of the file and include a filesize/linecount
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 bl show should show more of the file and include a filesize/linecount

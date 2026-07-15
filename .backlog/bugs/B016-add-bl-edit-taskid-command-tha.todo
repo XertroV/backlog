@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-03-16T03:43:24Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 174258.0340026518
 estimate_hours: 1
 id: B016
 priority: high
 started_at: "2026-03-16T03:43:24Z"
-status: in_progress
+status: done
 tags: []
 title: add `bl edit TASKID` command that opens the relevant file in $EDITOR
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 add `bl edit TASKID` command that opens the relevant file in $EDITOR

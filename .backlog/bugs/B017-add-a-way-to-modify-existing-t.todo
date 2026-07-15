@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-03-16T16:44:02Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 173477.40068276916
 estimate_hours: 1
 id: B017
 priority: high
 started_at: "2026-03-16T16:44:02Z"
-status: in_progress
+status: done
 tags: []
 title: Add a way to modify existing tasks by appending to their body (most common case and can be done automatically). Results should be autocommitted
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 Add a way to modify existing tasks by appending to their body (most common case and can be done automatically). Results should be autocommitted

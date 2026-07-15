@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-03-17T04:10:20Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 172791.10070088378
 estimate_hours: 1
 id: B019
 priority: high
 started_at: "2026-03-17T04:10:20Z"
-status: in_progress
+status: done
 tags: []
 title: backlogs logo doesnt render right in go
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 backlogs logo doesnt render right in go

@@ -1,16 +1,18 @@
 ---
 claimed_at: "2026-02-24T20:10:54Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T04:01:26Z"
 complexity: medium
 depends_on: []
+duration_minutes: 202070.53396372584
 estimate_hours: 1
 id: B009
 priority: high
 started_at: "2026-02-24T20:10:54Z"
-status: in_progress
+status: done
 tags: []
 title: 'go client: `bl ls` should accept multiple scopes'
+updated_at: "2026-07-15T04:01:26Z"
 ---
 
 go client: `bl ls` should accept multiple scopes
