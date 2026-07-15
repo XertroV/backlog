@@ -21,3 +21,4 @@ bugs:
     - file: B020-when-git-commits-are-made-the.todo
     - file: B021-bl-show-for-bugs-ideas-should.todo
     - file: B022-go-version-when-installed-loca.todo
+    - file: B023-add-ids-only-flag-to-bl-list-s.todo
