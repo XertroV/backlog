@@ -11,7 +11,10 @@ import (
 // BuildVersion can be injected at build time with:
 //
 //	go build -ldflags "-X github.com/XertroV/tasks/backlog_go/cmd.BuildVersion=<version>"
-var BuildVersion = "0.1.0"
+//
+// Default is 0.0.0 for local/dev builds that do not inject a release version.
+// Release CI sets this from the git tag (see .github/workflows/release.yml).
+var BuildVersion = "0.0.0"
 
 // RootCommand captures shared CLI metadata and the supported command list.
 type RootCommand struct {
@@ -97,7 +100,7 @@ func NewRootCommand() *RootCommand {
 func resolveBuildVersion() string {
 	version := strings.TrimSpace(BuildVersion)
 	if version == "" {
-		return "0.1.0"
+		return "0.0.0"
 	}
 	return version
 }

@@ -1062,7 +1062,7 @@ describe("native cli", () => {
     root = setupFixture();
     let p = run(["version"], root);
     expect(p.exitCode).toBe(0);
-    expect(p.stdout.toString()).toContain("backlog version 0.1.0");
+    expect(p.stdout.toString()).toContain("backlog version 0.0.0");
 
     p = run(["version", "P1.M1.E1.T001"], root);
     expect(p.exitCode).toBe(1);

@@ -26,7 +26,9 @@ CI, release notes) see [`../RELEASE.md`](../RELEASE.md).
 
 ## Module compatibility
 
-- `cmd/root.go` reports version metadata; keep command output synchronized with
-  release notes when bumping tag intent.
+- `cmd/root.go` reports version metadata via `BuildVersion`. The source default is
+  `0.0.0` for local/`go install` builds that do not inject a release version.
+  Release CI overwrites this with the tag (without leading `v`) using `-ldflags`.
+- Keep release notes synchronized with the injected version when shipping.
 - Release notes should call out command gaps clearly to avoid accidental support
   expectations.

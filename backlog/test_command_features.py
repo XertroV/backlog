@@ -602,7 +602,7 @@ def test_velocity_alias_is_listed_in_help(runner, tmp_feature_tasks_dir):
 def test_version_command_outputs_version(runner, tmp_feature_tasks_dir):
     result = runner.invoke(cli, ["version"])
     assert result.exit_code == 0
-    assert "backlog version 0.1.0" in result.output
+    assert "backlog version 0.0.0" in result.output
 
     extra_arg_result = runner.invoke(cli, ["version", "P1.M1.E1.T001"])
     assert extra_arg_result.exit_code != 0

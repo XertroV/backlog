@@ -92,7 +92,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           cd ${{ env.GO_PROJECT_DIR }}
-          # Strip the leading "v" so the binary reports e.g. "0.2.0", matching the source default.
+          # Strip the leading "v" so the binary reports e.g. "0.2.0" (source default is 0.0.0 for local builds).
           BUILD_VERSION="${{ steps.version.outputs.VERSION }}"
           BUILD_VERSION="${BUILD_VERSION#v}"
           go build -ldflags "-s -w -X github.com/XertroV/tasks/backlog_go/cmd.BuildVersion=${BUILD_VERSION}" \

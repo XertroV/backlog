@@ -5,6 +5,22 @@ import (
 	"testing"
 )
 
+func TestResolveBuildVersionEmptyFallsBackToDevDefault(t *testing.T) {
+	// Not parallel: mutates package-level BuildVersion.
+	prev := BuildVersion
+	t.Cleanup(func() { BuildVersion = prev })
+
+	BuildVersion = "   "
+	if got := resolveBuildVersion(); got != "0.0.0" {
+		t.Fatalf("empty BuildVersion = %q, want 0.0.0", got)
+	}
+
+	BuildVersion = "1.2.3"
+	if got := resolveBuildVersion(); got != "1.2.3" {
+		t.Fatalf("injected BuildVersion = %q, want 1.2.3", got)
+	}
+}
+
 func TestNewRootCommandDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -15,14 +31,14 @@ func TestNewRootCommandDefaults(t *testing.T) {
 	if command.name != "backlog" {
 		t.Fatalf("name = %q, expected backlog", command.name)
 	}
-	if command.version != "0.1.0" {
-		t.Fatalf("version = %q, expected 0.1.0", command.version)
+	if command.version != "0.0.0" {
+		t.Fatalf("version = %q, expected 0.0.0 (local builds without release ldflags)", command.version)
 	}
 	if command.Name() != "backlog" {
 		t.Fatalf("Name() = %q, expected backlog", command.Name())
 	}
-	if command.Version() != "0.1.0" {
-		t.Fatalf("Version() = %q, expected 0.1.0", command.Version())
+	if command.Version() != "0.0.0" {
+		t.Fatalf("Version() = %q, expected 0.0.0 (local builds without release ldflags)", command.Version())
 	}
 
 	if command.Usage() == "" {

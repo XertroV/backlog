@@ -3353,7 +3353,7 @@ async function cmdVersion(args: string[]): Promise<void> {
     printCommandHelpForCommand("version");
     textError("version accepts no TASK_ID arguments");
   }
-  console.log("backlog version 0.1.0");
+  console.log("backlog version 0.0.0");
 }
 
 async function cmdUnclaim(args: string[]): Promise<AutoCommitMetadata> {
@@ -4765,7 +4765,7 @@ async function main(): Promise<void> {
     return;
   }
   if (cmd === "--version") {
-    console.log("0.1.0");
+    console.log("0.0.0");
     return;
   }
   if (maybePrintCommandHelp(cmd, rest)) {

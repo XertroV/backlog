@@ -1779,7 +1779,7 @@ func TestRunVersionPrintsVersionOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run version = %v, expected nil", err)
 	}
-	assertContainsAll(t, output, "backlog version", "0.1.0")
+	assertContainsAll(t, output, "backlog version", "0.0.0")
 }
 
 func TestRunVersionRejectsPositionalArguments(t *testing.T) {
