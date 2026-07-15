@@ -13,14 +13,24 @@ updated_at: "2026-07-15T04:01:26Z"
 
 # bl show for bugs/ideas should include File stats and body preview like tasks
 
+## Context
+
+Task `show` already prints `File stats: N bytes, M lines` and a body preview (12 lines default, with `--long` / `--all`). Bug and idea `show` only print a thin summary (id/title/status/estimate/file path) and omit stats and body. Residual gap after closing B015 (task-path work).
+
 ## Steps to Reproduce
 
-1. TODO: Add steps
+1. `bl show P1.M1.E1.T001` — note File stats + Preview
+2. `bl show B021` (or any bug/idea) — note missing stats and body
 
 ## Expected Behavior
 
-TODO: Describe expected behavior
+For bugs and ideas, `bl show` should match task-show ergonomics:
+
+- `File stats: <bytes> bytes, <lines> lines`
+- Body/preview of the `.todo` file (default truncated, full with `--long` / `--all`)
+- Parity across Go, Python, and TypeScript clients
+- Tests covering bug and idea show paths
 
 ## Actual Behavior
 
-TODO: Describe actual behavior
+`renderBugOrIdeaDetail` (Go) and Python aux show path print metadata + file path only; no stats, no preview.
