@@ -1,0 +1,7 @@
+project: Invalid-file diagnostics fixture
+description: Shared parity fixture for show/claim invalid-file warnings
+phases:
+  - id: P1
+    name: Phase
+    path: 01-phase
+critical_path: []

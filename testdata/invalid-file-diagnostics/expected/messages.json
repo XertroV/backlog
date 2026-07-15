@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "contract_doc": "docs/diagnostics/invalid-file-warning-contract.md",
+  "stream": {
+    "warnings": "stdout",
+    "notes": "Warnings use the Warning: prefix on the same stream as normal command text. claim blocking errors are non-zero exit and must include the listed substrings."
+  },
+  "conditions": [
+    {
+      "code": "missing_indexed_file",
+      "fixture": "cases/missing-indexed-file",
+      "task_id": "P1.M1.E1.T001",
+      "detection": "Index entry file path does not exist under the data directory.",
+      "warning_substrings": [
+        "Task file missing for P1.M1.E1.T001"
+      ],
+      "show": {
+        "exit_code": 0,
+        "must_warn": true,
+        "must_show_body": false
+      },
+      "claim": {
+        "may_mutate": false,
+        "exit_code_nonzero": true,
+        "error_substrings": [
+          "Cannot claim P1.M1.E1.T001 because the task file is missing."
+        ]
+      },
+      "recovery": [
+        "backlog check",
+        "restore or recreate the .todo file at the indexed path",
+        "or fix file: in the epic index.yaml",
+        "backlog claim P1.M1.E1.T001"
+      ],
+      "implementation": {
+        "cli_assertions": {
+          "go": true,
+          "python": true,
+          "typescript": true
+        },
+        "notes": "Already enforced across clients."
+      }
+    },
+    {
+      "code": "malformed_frontmatter",
+      "fixture": "cases/malformed-frontmatter",
+      "task_id": "P1.M1.E1.T001",
+      "detection": "File exists but front matter lacks a valid opening --- fence (other malformation variants share the same code).",
+      "warning_substrings": [
+        "Invalid frontmatter format in P1.M1.E1.T001: missing opening `---` marker."
+      ],
+      "show": {
+        "exit_code": 0,
+        "must_warn": true,
+        "must_show_body": true,
+        "body_substrings": [
+          "not valid frontmatter"
+        ]
+      },
+      "claim": {
+        "may_mutate": true,
+        "exit_code_nonzero": false,
+        "error_substrings": [],
+        "must_warn_before_mutate": true
+      },
+      "recovery": [
+        "backlog edit P1.M1.E1.T001",
+        "fix --- YAML mapping --- fences",
+        "backlog show P1.M1.E1.T001"
+      ],
+      "implementation": {
+        "cli_assertions": {
+          "go": true,
+          "python": true,
+          "typescript": true
+        },
+        "notes": "show/claim should warn; claim remains allowed."
+      }
+    },
+    {
+      "code": "id_path_mismatch",
+      "fixture": "cases/id-path-mismatch",
+      "task_id": "P1.M1.E1.T001",
+      "index_derived_id": "P1.M1.E1.T001",
+      "frontmatter_id": "P9.M9.E9.T999",
+      "detection": "Index-derived full ID differs from non-empty frontmatter id after normalization.",
+      "warning_substrings": [
+        "Frontmatter ID mismatch in P1.M1.E1.T001: P9.M9.E9.T999"
+      ],
+      "show": {
+        "exit_code": 0,
+        "must_warn": true,
+        "must_show_body": true,
+        "body_substrings": [
+          "Mismatched ID body"
+        ],
+        "address_by": "index_derived_id"
+      },
+      "claim": {
+        "may_mutate": true,
+        "exit_code_nonzero": false,
+        "error_substrings": [],
+        "must_warn_before_mutate": true,
+        "address_by": "index_derived_id"
+      },
+      "recovery": [
+        "backlog show P1.M1.E1.T001",
+        "set frontmatter id: to P1.M1.E1.T001 or fix index/file ownership",
+        "backlog check",
+        "backlog claim P1.M1.E1.T001"
+      ],
+      "implementation": {
+        "cli_assertions": {
+          "go": false,
+          "python": false,
+          "typescript": false
+        },
+        "notes": "T002: keep lookup by index-derived ID and emit the mismatch warning."
+      }
+    },
+    {
+      "code": "file_absent_from_index",
+      "fixture": "cases/file-absent-from-index",
+      "task_id": "P1.M1.E1.T001",
+      "detection": "A .todo on disk resolves for the ID but no index entry references it.",
+      "warning_substrings": [
+        "Task file found but absent from index for P1.M1.E1.T001"
+      ],
+      "show": {
+        "exit_code": 0,
+        "must_warn": true,
+        "must_show_body": true,
+        "body_substrings": [
+          "Orphan task body"
+        ]
+      },
+      "claim": {
+        "may_mutate": false,
+        "exit_code_nonzero": true,
+        "error_substrings": [
+          "Cannot claim P1.M1.E1.T001 because it is not registered in the index."
+        ]
+      },
+      "recovery": [
+        "backlog show P1.M1.E1.T001",
+        "add tasks[] entry with file: in the epic index.yaml",
+        "backlog check",
+        "backlog claim P1.M1.E1.T001"
+      ],
+      "implementation": {
+        "cli_assertions": {
+          "go": false,
+          "python": false,
+          "typescript": false
+        },
+        "notes": "T002: orphan resolution on show; block claim with specified error."
+      }
+    }
+  ],
+  "healthy_control": {
+    "fixture": "cases/healthy-control",
+    "task_id": "P1.M1.E1.T001",
+    "must_not_contain_substrings": [
+      "Task file missing for",
+      "Invalid frontmatter",
+      "Frontmatter ID mismatch",
+      "absent from index"
+    ]
+  }
+}

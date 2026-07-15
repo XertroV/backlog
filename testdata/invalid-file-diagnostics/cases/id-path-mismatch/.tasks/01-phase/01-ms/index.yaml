@@ -1,0 +1,4 @@
+epics:
+  - id: E1
+    name: Epic
+    path: 01-epic
