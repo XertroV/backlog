@@ -1,0 +1,24 @@
+---
+complexity: medium
+created_at: "2026-07-15T05:07:21Z"
+depends_on:
+    - P2.M1.E1.T001
+estimate_hours: 8
+id: P2.M1.E1.T002
+priority: medium
+status: pending
+tags:
+    - diagnostics
+    - show
+    - claim
+    - parity
+title: Warn on invalid files in show and claim across all clients
+updated_at: "2026-07-15T05:07:21Z"
+---
+Implement the invalid-file diagnostic contract in the Go canonical client and Python/TypeScript parity helpers.
+
+Acceptance criteria:
+- show validates its resolved file and prints each detected issue without hiding readable content.
+- claim validates before mutation, prints all warnings, and preserves the contract for files that are still safe to claim.
+- Diagnostics identify the affected path, reason, and a useful next command or remediation.
+- Go, Python, and TypeScript behavior is aligned; focused tests for all three clients pass together with the parity suite.

@@ -1,30 +1,39 @@
-description: ''
-phases:
-- id: P1
-  name: Go implementation
-  path: 01-go-implementation
-  status: done
-  weeks: 6
-  estimate_hours: 240.0
-  priority: high
-  depends_on: []
-  description: Implement a standalone Go implementation of the backlog CLI with parity
-    and migration parity to Python/TypeScript.
-  locked: true
-project: The Backlogs
-timeline_weeks: 0
-stats:
-  total_tasks: 42
-  done: 0
-  in_progress: 0
-  blocked: 0
-  pending: 42
-  total_estimate_hours: 240.0
 critical_path:
-- P1.M2.E3.T001
-- P1.M2.E3.T002
-- P1.M2.E3.T003
-- P1.M3.E1.T001
-- P1.M3.E1.T002
-- P1.M3.E1.T003
+    - P1.M2.E3.T001
+    - P1.M2.E3.T002
+    - P1.M2.E3.T003
+    - P1.M3.E1.T001
+    - P1.M3.E1.T002
+    - P1.M3.E1.T003
+description: ""
 next_available: null
+phases:
+    - depends_on: []
+      description: Implement a standalone Go implementation of the backlog CLI with parity and migration parity to Python/TypeScript.
+      estimate_hours: 240
+      id: P1
+      locked: true
+      name: Go implementation
+      path: 01-go-implementation
+      priority: high
+      status: done
+      weeks: 6
+    - depends_on: []
+      description: Surface actionable warnings when backlog task files are missing, malformed, mismatched, or absent from indexes.
+      estimate_hours: 10
+      id: P2
+      locked: false
+      name: Data integrity diagnostics
+      path: 02-data-integrity-diagnostics
+      priority: medium
+      status: pending
+      weeks: 1
+project: The Backlogs
+stats:
+    blocked: 0
+    done: 0
+    in_progress: 0
+    pending: 42
+    total_estimate_hours: 240
+    total_tasks: 42
+timeline_weeks: 0

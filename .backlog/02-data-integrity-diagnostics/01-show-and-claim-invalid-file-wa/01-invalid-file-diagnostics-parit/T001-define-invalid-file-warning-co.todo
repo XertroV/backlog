@@ -1,0 +1,21 @@
+---
+complexity: medium
+created_at: "2026-07-15T05:07:16Z"
+depends_on: []
+estimate_hours: 2
+id: P2.M1.E1.T001
+priority: medium
+status: pending
+tags:
+    - diagnostics
+    - parity
+    - testing
+title: Define invalid-file warning contract and parity fixtures
+updated_at: "2026-07-15T05:07:16Z"
+---
+Establish the observable contract for invalid backlog files used by show and claim.
+
+Acceptance criteria:
+- Enumerate supported warning conditions: missing indexed file, malformed front matter, ID/path mismatch, and a resolvable file absent from the index.
+- Add shared or equivalent fixtures and focused assertions for Go, Python, and TypeScript commands, including stderr/stdout or JSON behavior as applicable.
+- Document which conditions remain claimable and which prevent mutation, with actionable recovery guidance.

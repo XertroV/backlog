@@ -1,0 +1,18 @@
+complexity: medium
+depends_on: []
+estimate_hours: 10
+id: P2
+locked: false
+milestones:
+    - complexity: medium
+      depends_on: []
+      description: Define and implement consistent invalid-file diagnostics for read and workflow commands.
+      estimate_hours: 10
+      id: M1
+      locked: false
+      name: Show and claim invalid-file warnings
+      path: 01-show-and-claim-invalid-file-wa
+      status: pending
+name: Data integrity diagnostics
+status: pending
+weeks: 1

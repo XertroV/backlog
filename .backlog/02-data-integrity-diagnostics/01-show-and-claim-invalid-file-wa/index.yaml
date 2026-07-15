@@ -1,0 +1,17 @@
+complexity: medium
+depends_on: []
+epics:
+    - complexity: medium
+      depends_on: []
+      description: Make show and claim expose actionable file-integrity warnings consistently across the Go reference client and Python/TypeScript parity helpers.
+      estimate_hours: 10
+      id: E1
+      locked: false
+      name: Invalid-file diagnostics parity
+      path: 01-invalid-file-diagnostics-parit
+      status: pending
+estimate_hours: 10
+id: P2.M1
+locked: false
+name: Show and claim invalid-file warnings
+status: pending

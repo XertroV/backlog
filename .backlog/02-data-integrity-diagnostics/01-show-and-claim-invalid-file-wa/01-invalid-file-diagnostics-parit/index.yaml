@@ -1,0 +1,25 @@
+complexity: medium
+depends_on: []
+estimate_hours: 10
+id: P2.M1.E1
+locked: false
+name: Invalid-file diagnostics parity
+status: pending
+tasks:
+    - complexity: medium
+      depends_on: []
+      estimate_hours: 2
+      file: T001-define-invalid-file-warning-co.todo
+      id: T001
+      priority: medium
+      status: pending
+      title: Define invalid-file warning contract and parity fixtures
+    - complexity: medium
+      depends_on:
+        - P2.M1.E1.T001
+      estimate_hours: 8
+      file: T002-warn-on-invalid-files-in-show.todo
+      id: T002
+      priority: medium
+      status: pending
+      title: Warn on invalid files in show and claim across all clients
