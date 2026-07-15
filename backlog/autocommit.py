@@ -143,12 +143,49 @@ def _git_amend_no_edit(cwd: Optional[Path | str] = None) -> None:
     _run_git(["commit", "--amend", "--no-edit"], cwd)
 
 
+def _format_auto_commit_success(amended: bool, message: str) -> str:
+    if amended:
+        return "✓ Auto-amended previous bl add commit"
+    return f"✓ Auto-committed: {message}"
+
+
+def _format_auto_commit_failure(
+    err: object,
+    message: str,
+    changed_files: list[str] | None = None,
+) -> str:
+    paths = changed_files or []
+    if paths:
+        path_args = " ".join(paths)
+        add_hint = f"git add -- {path_args}"
+    else:
+        add_hint = "git add -- <changed-files>"
+    return (
+        f"Auto-commit failed: {err}\n"
+        "  The backlog change was saved, but git did not create a commit.\n"
+        "  To fix:\n"
+        "    1. Inspect: git status\n"
+        f"    2. Stage:  {add_hint}\n"
+        f"    3. Commit: git commit -m {message!r}\n"
+        "  If git identity is missing:\n"
+        '    git config user.email "you@example.com"\n'
+        '    git config user.name "Your Name"'
+    )
+
+
 @dataclass
 class _AutoCommitContext:
     has_staged: bool
     pre_status: Dict[str, str]
     can_amend_bl_add: bool
     prev_add_unpushed: bool
+
+
+@dataclass
+class _AutoCommitOutcome:
+    amended: bool
+    message: str
+    changed_files: list[str]
 
 
 def _capture_auto_commit_context(cwd: Optional[Path | str] = None) -> _AutoCommitContext:
@@ -171,35 +208,61 @@ def _execute_auto_commit(
     context: _AutoCommitContext,
     metadata: tuple[str, str] | None = None,
     cwd: Optional[Path | str] = None,
-) -> None:
+) -> _AutoCommitOutcome | None:
     post_status = _git_status_snapshot(cwd)
     changed_files = _changed_tracked_paths(context.pre_status, post_status)
     if not changed_files:
-        return
+        return None
 
+    message = _auto_commit_message(command, metadata)
     _git_add(changed_files, cwd)
 
     if command == "add" and context.can_amend_bl_add and context.prev_add_unpushed:
         try:
             _git_amend_no_edit(cwd)
-            return
+            return _AutoCommitOutcome(
+                amended=True,
+                message=message,
+                changed_files=changed_files,
+            )
         except Exception:
             pass
 
-    _git_commit(_auto_commit_message(command, metadata), cwd)
+    _git_commit(message, cwd)
+    return _AutoCommitOutcome(
+        amended=False,
+        message=message,
+        changed_files=changed_files,
+    )
 
 
 def run_with_auto_commit(
     command: str,
     action: Callable[[], tuple[str, str] | None],
     warn: Callable[[str], None] | None = None,
+    info: Callable[[str], None] | None = None,
     cwd: Optional[Path | str] = None,
 ) -> None:
     """Run a command and auto-commit changed tracked files when safe.
 
     If we are not in a git repo or git commands fail, the command still runs.
     If there are staged changes before the command runs, we skip auto-commit.
+
+    On success, prints that a commit was made. On failure, prints a warning with
+    fix instructions (via warn, or stdout if warn is not provided).
     """
+
+    def _info(msg: str) -> None:
+        if info is not None:
+            info(msg)
+        else:
+            print(msg)
+
+    def _warn(msg: str) -> None:
+        if warn is not None:
+            warn(msg)
+        else:
+            print(f"Warning: {msg}")
 
     context: _AutoCommitContext | None
     try:
@@ -212,8 +275,19 @@ def run_with_auto_commit(
     if context is None or context.has_staged:
         return
 
+    commit_message = _auto_commit_message(command, metadata)
     try:
-        _execute_auto_commit(command, context, metadata, cwd)
+        outcome = _execute_auto_commit(command, context, metadata, cwd)
     except Exception as err:
-        if warn is not None:
-            warn(f"Auto-commit skipped: {err}")
+        # Best-effort: include changed paths when status still works.
+        changed_files: list[str] | None = None
+        try:
+            post_status = _git_status_snapshot(cwd)
+            changed_files = _changed_tracked_paths(context.pre_status, post_status)
+        except Exception:
+            changed_files = None
+        _warn(_format_auto_commit_failure(err, commit_message, changed_files))
+        return
+
+    if outcome is not None:
+        _info(_format_auto_commit_success(outcome.amended, outcome.message))

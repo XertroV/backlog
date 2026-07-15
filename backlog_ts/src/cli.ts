@@ -317,29 +317,68 @@ function captureAutoCommitContext(): AutoCommitContext {
   return context;
 }
 
+type AutoCommitOutcome = {
+  amended: boolean;
+  message: string;
+  changedFiles: string[];
+};
+
+function formatAutoCommitSuccess(outcome: AutoCommitOutcome): string {
+  if (outcome.amended) {
+    return "✓ Auto-amended previous bl add commit";
+  }
+  return `✓ Auto-committed: ${outcome.message}`;
+}
+
+function formatAutoCommitFailure(
+  err: unknown,
+  message: string,
+  changedFiles: string[] | null,
+): string {
+  const errText =
+    err instanceof Error ? err.message || err.toString() : String(err);
+  const addHint =
+    changedFiles && changedFiles.length
+      ? `git add -- ${changedFiles.join(" ")}`
+      : "git add -- <changed-files>";
+  return [
+    `Auto-commit failed: ${errText}`,
+    "  The backlog change was saved, but git did not create a commit.",
+    "  To fix:",
+    "    1. Inspect: git status",
+    `    2. Stage:  ${addHint}`,
+    `    3. Commit: git commit -m ${JSON.stringify(message)}`,
+    "  If git identity is missing:",
+    '    git config user.email "you@example.com"',
+    '    git config user.name "Your Name"',
+  ].join("\n");
+}
+
 async function executeAutoCommit(
   command: string,
   context: AutoCommitContext,
   metadata: AutoCommitMetadata | null,
-): Promise<void> {
+): Promise<AutoCommitOutcome | null> {
   const postStatus = gitStatusSnapshot();
   const changed = changedTrackedPaths(context.preStatus, postStatus);
   if (!changed.length) {
-    return;
+    return null;
   }
 
+  const message = autoCommitMessage(command, metadata);
   gitAddPaths(changed);
 
   if (command === "add" && context.canAmendBlAdd && context.prevAddUnpushed) {
     try {
       gitAmendNoEdit();
-      return;
+      return { amended: true, message, changedFiles: changed };
     } catch {
       // Fall back to creating a new commit if amend fails.
     }
   }
 
-  gitCommit(autoCommitMessage(command, metadata));
+  gitCommit(message);
+  return { amended: false, message, changedFiles: changed };
 }
 
 async function runWithAutoCommit(
@@ -359,10 +398,23 @@ async function runWithAutoCommit(
     return;
   }
 
+  const commitMessage = autoCommitMessage(command, metadata);
   try {
-    await executeAutoCommit(command, context, metadata);
+    const outcome = await executeAutoCommit(command, context, metadata);
+    if (outcome) {
+      console.log(formatAutoCommitSuccess(outcome));
+    }
   } catch (err) {
-    console.log(`Warning: Auto-commit skipped: ${(err as Error).toString()}`);
+    let changedFiles: string[] | null = null;
+    try {
+      const postStatus = gitStatusSnapshot();
+      changedFiles = changedTrackedPaths(context.preStatus, postStatus);
+    } catch {
+      changedFiles = null;
+    }
+    console.log(
+      `Warning: ${formatAutoCommitFailure(err, commitMessage, changedFiles)}`,
+    );
   }
 }
 

@@ -1110,6 +1110,40 @@ type gitAutoCommitMetadata struct {
 
 type gitAutoCommitHandler func([]string, *gitAutoCommitMetadata) error
 
+type gitAutoCommitOutcome struct {
+	amended      bool
+	message      string
+	changedFiles []string
+}
+
+func formatAutoCommitSuccess(outcome gitAutoCommitOutcome) string {
+	if outcome.amended {
+		return "✓ Auto-amended previous bl add commit"
+	}
+	return fmt.Sprintf("✓ Auto-committed: %s", outcome.message)
+}
+
+func formatAutoCommitFailure(err error, message string, changedFiles []string) string {
+	addHint := "git add -- <changed-files>"
+	if len(changedFiles) > 0 {
+		addHint = "git add -- " + strings.Join(changedFiles, " ")
+	}
+	return fmt.Sprintf(
+		"Auto-commit failed: %s\n"+
+			"  The backlog change was saved, but git did not create a commit.\n"+
+			"  To fix:\n"+
+			"    1. Inspect: git status\n"+
+			"    2. Stage:  %s\n"+
+			"    3. Commit: git commit -m %q\n"+
+			"  If git identity is missing:\n"+
+			"    git config user.email \"you@example.com\"\n"+
+			"    git config user.name \"Your Name\"",
+		err,
+		addHint,
+		message,
+	)
+}
+
 func runWithAutoCommit(command string, args []string, handler gitAutoCommitHandler) error {
 	context, err := captureAutoCommitContext()
 	if err != nil {
@@ -1126,8 +1160,18 @@ func runWithAutoCommit(command string, args []string, handler gitAutoCommitHandl
 		return nil
 	}
 
-	if err := executeAutoCommit(command, context, metadata); err != nil {
-		fmt.Printf("%s: %s\n", styleWarning("Auto-commit skipped"), err)
+	commitMessage := autoCommitMessage(command, metadata)
+	outcome, err := executeAutoCommit(command, context, metadata)
+	if err != nil {
+		changedFiles := []string(nil)
+		if postStatus, statusErr := gitStatusSnapshot(); statusErr == nil {
+			changedFiles = changedTrackedPaths(context.preStatus, postStatus)
+		}
+		fmt.Printf("%s: %s\n", styleWarning("Warning"), formatAutoCommitFailure(err, commitMessage, changedFiles))
+		return nil
+	}
+	if outcome != nil {
+		fmt.Println(styleSuccess(formatAutoCommitSuccess(*outcome)))
 	}
 	return nil
 }
@@ -1152,28 +1196,40 @@ func captureAutoCommitContext() (*gitAutoCommitContext, error) {
 	return ctx, nil
 }
 
-func executeAutoCommit(command string, context *gitAutoCommitContext, metadata gitAutoCommitMetadata) error {
+func executeAutoCommit(command string, context *gitAutoCommitContext, metadata gitAutoCommitMetadata) (*gitAutoCommitOutcome, error) {
 	postStatus, err := gitStatusSnapshot()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	changedFiles := changedTrackedPaths(context.preStatus, postStatus)
 	if len(changedFiles) == 0 {
-		return nil
+		return nil, nil
 	}
 
+	message := autoCommitMessage(command, metadata)
 	if err := gitAddPaths(changedFiles); err != nil {
-		return err
+		return nil, err
 	}
 
 	if command == "add" && context.canAmendBlAdd && context.prevAddUnpushed {
 		if err := gitAmendCommit(); err == nil {
-			return nil
+			return &gitAutoCommitOutcome{
+				amended:      true,
+				message:      message,
+				changedFiles: changedFiles,
+			}, nil
 		}
 	}
 
-	return gitCommit(autoCommitMessage(command, metadata))
+	if err := gitCommit(message); err != nil {
+		return nil, err
+	}
+	return &gitAutoCommitOutcome{
+		amended:      false,
+		message:      message,
+		changedFiles: changedFiles,
+	}, nil
 }
 
 func normalizeAutoCommitMetadata(value string) string {

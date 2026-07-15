@@ -2591,6 +2591,7 @@ def test_add_command_auto_commits_when_no_staged_files(runner, tmp_tasks_dir):
     assert result.exit_code == 0
     assert "Created task: P1.M1.E1.T001" in result.output
     assert "File: .tasks/01-test-phase/01-test-milestone/01-test-epic/T001-auto-commit-task.todo" in result.output
+    assert "✓ Auto-committed: bl add P1.M1.E1.T001: Auto commit task" in result.output
 
     assert git_commit_count(tmp_tasks_dir) == initial_commits + 1
     assert run_git(tmp_tasks_dir, "log", "-1", "--pretty=%B") == "bl add P1.M1.E1.T001: Auto commit task"
@@ -2607,6 +2608,7 @@ def test_add_command_skips_auto_commit_if_staged_files_exist(runner, tmp_tasks_d
     result = runner.invoke(cli, ["add", "P1.M1.E1", "--title", "Should remain staged"])
     assert result.exit_code == 0
     assert "Created task: P1.M1.E1.T001" in result.output
+    assert "Auto-committed" not in result.output
 
     assert git_commit_count(tmp_tasks_dir) == initial_commits
     assert "A  staged-change.txt" in run_git(tmp_tasks_dir, "status", "--short")
@@ -2619,15 +2621,38 @@ def test_add_command_amends_previous_unpushed_bl_add_commit(runner, tmp_tasks_di
     first = runner.invoke(cli, ["add", "P1.M1.E1", "--title", "First auto commit task"])
     assert first.exit_code == 0
     assert "Created task: P1.M1.E1.T001" in first.output
+    assert "✓ Auto-committed: bl add P1.M1.E1.T001: First auto commit task" in first.output
 
     commits_after_first = git_commit_count(tmp_tasks_dir)
 
     second = runner.invoke(cli, ["add", "P1.M1.E1", "--title", "Second auto commit task"])
     assert second.exit_code == 0
     assert "Created task: P1.M1.E1.T002" in second.output
+    assert "✓ Auto-amended previous bl add commit" in second.output
 
     assert git_commit_count(tmp_tasks_dir) == commits_after_first
     assert run_git(tmp_tasks_dir, "log", "-1", "--pretty=%B") == "bl add P1.M1.E1.T001: First auto commit task"
+
+
+def test_add_command_warns_with_fix_instructions_when_auto_commit_fails(runner, tmp_tasks_dir):
+    """add should warn with fix instructions when git commit fails."""
+    initialize_test_git_repo(tmp_tasks_dir)
+    hooks = tmp_tasks_dir / ".githooks-fail"
+    hooks.mkdir()
+    hook = hooks / "commit-msg"
+    hook.write_text("#!/bin/sh\necho 'hook rejected commit' >&2\nexit 1\n")
+    hook.chmod(0o755)
+    run_git(tmp_tasks_dir, "config", "core.hooksPath", str(hooks))
+
+    initial_commits = git_commit_count(tmp_tasks_dir)
+    result = runner.invoke(cli, ["add", "P1.M1.E1", "--title", "Hook fails commit"])
+    assert result.exit_code == 0
+    assert "Created task: P1.M1.E1.T001" in result.output
+    assert "Auto-commit failed" in result.output
+    assert "git status" in result.output
+    assert "git commit -m" in result.output
+    assert "git config user.email" in result.output
+    assert git_commit_count(tmp_tasks_dir) == initial_commits
 
 
 def test_bug_command_auto_commits_when_no_staged_files(runner, tmp_tasks_dir):

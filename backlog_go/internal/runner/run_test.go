@@ -795,6 +795,9 @@ func TestRunAddAutoCommitCreatesBlAddCommit(t *testing.T) {
 	if !strings.Contains(output, "Created task: P1.M1.E1.T001") {
 		t.Fatalf("output = %q, expected created task", output)
 	}
+	if !strings.Contains(output, "✓ Auto-committed: bl add P1.M1.E1.T001: Auto commit task") {
+		t.Fatalf("output = %q, expected auto-commit success message", output)
+	}
 	if gitCommitCount(t, root) != commitCount+1 {
 		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), commitCount+1)
 	}
@@ -830,11 +833,62 @@ func TestRunAddAutoCommitSkipsWhenStagedChangesExist(t *testing.T) {
 	if !strings.Contains(output, "Created task: P1.M1.E1.T001") {
 		t.Fatalf("output = %q, expected created task", output)
 	}
+	if strings.Contains(output, "Auto-committed") {
+		t.Fatalf("output = %q, did not expect auto-commit success when staged", output)
+	}
 	if gitCommitCount(t, root) != commitCount {
 		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), commitCount)
 	}
 	if status := runGit(t, root, "status", "--short"); !strings.Contains(status, "A  staged-change.txt") {
 		t.Fatalf("status = %q, expected staged change to be preserved", status)
+	}
+}
+
+func TestRunAddAutoCommitWarnsWithFixInstructionsOnFailure(t *testing.T) {
+	t.Parallel()
+
+	root := setupAddFixture(t)
+	initializeTestGitRepo(t, root)
+
+	hooksDir := filepath.Join(root, ".githooks-fail")
+	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+		t.Fatalf("mkdir hooks: %v", err)
+	}
+	hookPath := filepath.Join(hooksDir, "commit-msg")
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho 'hook rejected commit' >&2\nexit 1\n"), 0o755); err != nil {
+		t.Fatalf("write hook: %v", err)
+	}
+	runGit(t, root, "config", "core.hooksPath", hooksDir)
+
+	commitCount := gitCommitCount(t, root)
+	output, err := runInDir(
+		t,
+		root,
+		"add",
+		"P1.M1.E1",
+		"--title",
+		"Hook fails commit",
+	)
+	if err != nil {
+		t.Fatalf("run add = %v", err)
+	}
+	if !strings.Contains(output, "Created task: P1.M1.E1.T001") {
+		t.Fatalf("output = %q, expected created task", output)
+	}
+	if !strings.Contains(output, "Auto-commit failed") {
+		t.Fatalf("output = %q, expected auto-commit failure warning", output)
+	}
+	if !strings.Contains(output, "git status") {
+		t.Fatalf("output = %q, expected git status fix instruction", output)
+	}
+	if !strings.Contains(output, "git commit -m") {
+		t.Fatalf("output = %q, expected git commit fix instruction", output)
+	}
+	if !strings.Contains(output, "git config user.email") {
+		t.Fatalf("output = %q, expected identity fix instruction", output)
+	}
+	if gitCommitCount(t, root) != commitCount {
+		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), commitCount)
 	}
 }
 
@@ -858,6 +912,9 @@ func TestRunAddAutoCommitAmendsUnpushedBlAdd(t *testing.T) {
 	if !strings.Contains(output, "Created task: P1.M1.E1.T001") {
 		t.Fatalf("output = %q, expected created first task", output)
 	}
+	if !strings.Contains(output, "✓ Auto-committed: bl add P1.M1.E1.T001: First auto commit task") {
+		t.Fatalf("output = %q, expected auto-commit success message", output)
+	}
 
 	commitCount := gitCommitCount(t, root)
 	output, err = runInDir(
@@ -873,6 +930,9 @@ func TestRunAddAutoCommitAmendsUnpushedBlAdd(t *testing.T) {
 	}
 	if !strings.Contains(output, "Created task: P1.M1.E1.T002") {
 		t.Fatalf("output = %q, expected created second task", output)
+	}
+	if !strings.Contains(output, "✓ Auto-amended previous bl add commit") {
+		t.Fatalf("output = %q, expected auto-amend success message", output)
 	}
 	if gitCommitCount(t, root) != commitCount {
 		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), commitCount)

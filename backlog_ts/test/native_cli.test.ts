@@ -1963,6 +1963,9 @@ tags: []
     const p = run(["add", "P1.M1.E1", "--title", "auto-commit task"], root);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("Created task: P1.M1.E1.T003");
+    expect(p.stdout.toString()).toContain(
+      "✓ Auto-committed: bl add P1.M1.E1.T003: auto-commit task",
+    );
     expect(gitCommitCount(root)).toBe(initialCommitCount + 1);
     expect(runGit(root, "log", "-1", "--pretty=%B")).toBe("bl add P1.M1.E1.T003: auto-commit task");
     expect(runGit(root, "status", "--short")).toBe("");
@@ -1978,6 +1981,7 @@ tags: []
     const p = run(["add", "P1.M1.E1", "--title", "skip commit"], root);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("Created task: P1.M1.E1.T003");
+    expect(p.stdout.toString()).not.toContain("Auto-committed");
     expect(gitCommitCount(root)).toBe(initialCommitCount);
     expect(runGit(root, "status", "--short")).toContain("A  staged-change.txt");
   });
@@ -1989,13 +1993,39 @@ tags: []
     let p = run(["add", "P1.M1.E1", "--title", "first auto task"], root);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("Created task: P1.M1.E1.T003");
+    expect(p.stdout.toString()).toContain(
+      "✓ Auto-committed: bl add P1.M1.E1.T003: first auto task",
+    );
     const commitCountAfterFirst = gitCommitCount(root);
 
     p = run(["add", "P1.M1.E1", "--title", "second auto task"], root);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("Created task: P1.M1.E1.T004");
+    expect(p.stdout.toString()).toContain("✓ Auto-amended previous bl add commit");
     expect(gitCommitCount(root)).toBe(commitCountAfterFirst);
     expect(runGit(root, "log", "-1", "--pretty=%B")).toBe("bl add P1.M1.E1.T003: first auto task");
+  });
+
+  test("add warns with fix instructions when auto-commit fails", () => {
+    root = setupFixture();
+    initializeTestGitRepo(root);
+    const hooksDir = join(root, ".githooks-fail");
+    mkdirSync(hooksDir, { recursive: true });
+    const hookPath = join(hooksDir, "commit-msg");
+    writeFileSync(hookPath, "#!/bin/sh\necho 'hook rejected commit' >&2\nexit 1\n");
+    chmodSync(hookPath, 0o755);
+    runGit(root, "config", "core.hooksPath", hooksDir);
+
+    const initialCommitCount = gitCommitCount(root);
+    const p = run(["add", "P1.M1.E1", "--title", "hook fails commit"], root);
+    expect(p.exitCode).toBe(0);
+    const out = p.stdout.toString();
+    expect(out).toContain("Created task: P1.M1.E1.T003");
+    expect(out).toContain("Auto-commit failed");
+    expect(out).toContain("git status");
+    expect(out).toContain("git commit -m");
+    expect(out).toContain("git config user.email");
+    expect(gitCommitCount(root)).toBe(initialCommitCount);
   });
 
   test("bug auto-commits created bug when no staged files exist", () => {
