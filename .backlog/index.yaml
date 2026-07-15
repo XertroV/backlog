@@ -17,11 +17,11 @@ phases:
       description: Surface actionable warnings when backlog task files are missing, malformed, mismatched, or absent from indexes.
       estimate_hours: 10
       id: P2
-      locked: false
+      locked: true
       name: Data integrity diagnostics
       path: 02-data-integrity-diagnostics
       priority: medium
-      status: pending
+      status: done
       weeks: 1
 project: The Backlogs
 stats:

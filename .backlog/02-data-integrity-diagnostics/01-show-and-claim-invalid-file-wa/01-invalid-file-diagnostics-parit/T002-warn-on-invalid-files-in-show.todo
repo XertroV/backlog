@@ -1,19 +1,20 @@
 ---
 claimed_at: "2026-07-15T06:35:23Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-15T06:46:31Z"
 complexity: medium
 created_at: "2026-07-15T05:07:21Z"
 depends_on:
     - P2.M1.E1.T001
+duration_minutes: 11.142082962683334
 estimate_hours: 8
 id: P2.M1.E1.T002
 priority: medium
 started_at: "2026-07-15T06:35:23Z"
-status: in_progress
+status: done
 tags: []
 title: Warn on invalid files in show and claim across all clients
-updated_at: "2026-07-15T06:35:23Z"
+updated_at: "2026-07-15T06:46:31Z"
 ---
 Implement the invalid-file diagnostic contract in the Go canonical client and Python/TypeScript parity helpers.
 

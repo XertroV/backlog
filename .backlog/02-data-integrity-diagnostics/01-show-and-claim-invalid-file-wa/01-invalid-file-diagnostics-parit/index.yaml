@@ -10,7 +10,7 @@ stats:
     in_progress: 0
     pending: 2
     total: 2
-status: pending
+status: done
 tasks:
     - complexity: medium
       depends_on: []
@@ -28,6 +28,6 @@ tasks:
       file: T002-warn-on-invalid-files-in-show.todo
       id: T002
       priority: medium
-      status: in_progress
+      status: done
       tags: []
       title: Warn on invalid files in show and claim across all clients

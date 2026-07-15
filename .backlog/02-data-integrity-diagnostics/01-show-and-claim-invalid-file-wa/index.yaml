@@ -9,7 +9,7 @@ epics:
       locked: false
       name: Invalid-file diagnostics parity
       path: 01-invalid-file-diagnostics-parit
-      status: pending
+      status: done
 estimate_hours: 10
 id: P2.M1
 locked: false
@@ -20,4 +20,4 @@ stats:
     in_progress: 0
     pending: 2
     total_tasks: 2
-status: pending
+status: done

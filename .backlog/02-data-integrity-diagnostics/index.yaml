@@ -2,7 +2,7 @@ complexity: medium
 depends_on: []
 estimate_hours: 10
 id: P2
-locked: false
+locked: true
 milestones:
     - complexity: medium
       depends_on: []
@@ -12,7 +12,7 @@ milestones:
       locked: false
       name: Show and claim invalid-file warnings
       path: 01-show-and-claim-invalid-file-wa
-      status: pending
+      status: done
 name: Data integrity diagnostics
 stats:
     blocked: 0
@@ -20,5 +20,5 @@ stats:
     in_progress: 0
     pending: 2
     total_tasks: 2
-status: pending
+status: done
 weeks: 1
