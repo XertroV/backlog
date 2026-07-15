@@ -289,6 +289,74 @@ describe("native cli", () => {
     );
   });
 
+  test("list --ids-only prints one id per line", () => {
+    root = setupFixture(true);
+    const idea = run(["idea", "capture planning intake"], root);
+    expect(idea.exitCode).toBe(0);
+
+    const list = run(["list", "--ids-only"], root);
+    expect(list.exitCode).toBe(0);
+    const lines = list.stdout
+      .toString()
+      .trim()
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      expect(line.includes(" ")).toBe(false);
+    }
+    expect(lines).toContain("P1.M1.E1.T001");
+    expect(lines).toContain("P1.M1.E1.T002");
+    expect(lines).toContain("B001");
+    expect(lines).toContain("I001");
+  });
+
+  test("list --ids-only composes with filters", () => {
+    root = setupFixture(true);
+    const idea = run(["idea", "capture planning intake"], root);
+    expect(idea.exitCode).toBe(0);
+    const t002Path = join(root, ".tasks", "01-phase", "01-ms", "01-epic", "T002-b.todo");
+    writeFileSync(
+      t002Path,
+      readFileSync(t002Path, "utf8").replace("status: pending", "status: done"),
+    );
+
+    const bugsOnly = run(["list", "--bugs", "--ids-only"], root);
+    expect(bugsOnly.exitCode).toBe(0);
+    expect(bugsOnly.stdout.toString().trim()).toBe("B001");
+
+    const ideasOnly = run(["list", "--ideas", "--ids-only"], root);
+    expect(ideasOnly.exitCode).toBe(0);
+    expect(ideasOnly.stdout.toString().trim()).toBe("I001");
+
+    const unfinished = run(["list", "--unfinished", "--ids-only"], root);
+    expect(unfinished.exitCode).toBe(0);
+    const unfinishedIds = unfinished.stdout.toString().trim().split("\n");
+    expect(unfinishedIds).toContain("P1.M1.E1.T001");
+    expect(unfinishedIds).not.toContain("P1.M1.E1.T002");
+
+    const scoped = run(["list", "P1.M1.E1", "--ids-only"], root);
+    expect(scoped.exitCode).toBe(0);
+    const scopedIds = scoped.stdout.toString().trim().split("\n");
+    expect(scopedIds).toContain("P1.M1.E1.T001");
+    expect(scopedIds).not.toContain("B001");
+
+    const available = run(["list", "--available", "--ids-only"], root);
+    expect(available.exitCode).toBe(0);
+    for (const line of available.stdout.toString().trim().split("\n")) {
+      expect(line.includes(" ")).toBe(false);
+      expect(line).not.toContain("Available");
+    }
+  });
+
+  test("list --ids-only rejects --json", () => {
+    root = setupFixture();
+    const list = run(["list", "--ids-only", "--json"], root);
+    expect(list.exitCode).not.toBe(0);
+    const combined = `${list.stdout.toString()}${list.stderr.toString()}`;
+    expect(combined).toContain("--ids-only cannot be used with --json");
+  });
+
   test("list hides completed bugs by default and can include via flag", () => {
     root = setupFixture(true);
     const bugPath = join(root, ".tasks", "bugs", "B001-critical-bug.todo");

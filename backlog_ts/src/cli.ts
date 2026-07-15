@@ -706,7 +706,7 @@ const commandHelpSpecs: Record<string, CommandHelpSpec> = {
   help: { summary: "Show command overview and guidance.", usage: "backlog help [COMMAND]", options: [], examples: ["backlog help", "backlog help show"] },
   idea: { summary: "Capture an idea as planning intake.", usage: "backlog idea [--title <TITLE> | IDEA_TEXT] [options]", options: ["--title, -T", "--estimate, -e", "--complexity, -c", "--priority, -p", "--depends-on, -d", "--tags", "--simple, -s", "--body, -b"], examples: ["backlog idea \"improve migration diagnostics\"", "backlog idea --title \"Improve docs flow\" --simple"] },
   init: { summary: "Initialize a new .backlog project.", usage: "backlog init --project NAME [--description TEXT] [--timeline-weeks N]", options: ["--project, -p", "--description, -d", "--timeline-weeks, -w"], examples: ["backlog init --project my-project"] },
-  list: { summary: "List tasks with filtering options.", usage: "backlog list [<SCOPE>] [options]", options: ["--status", "--critical", "--available, -a", "--complexity", "--priority", "--progress", "--json", "--all", "--unfinished", "--bugs, -b", "--ideas, -i", "--show-completed-aux", "--phase", "--milestone", "--epic"], examples: ["backlog list", "backlog list P1.M1 --progress", "backlog list --json"] },
+  list: { summary: "List tasks with filtering options.", usage: "backlog list [<SCOPE>] [options]", options: ["--status", "--critical", "--available, -a", "--complexity", "--priority", "--progress", "--json", "--ids-only", "--all", "--unfinished", "--bugs, -b", "--ideas, -i", "--show-completed-aux", "--phase", "--milestone", "--epic"], examples: ["backlog list", "backlog list --ids-only", "backlog list --available --ids-only", "backlog list P1.M1 --progress", "backlog list --json"] },
   lock: { summary: "Lock a phase/milestone/epic.", usage: "backlog lock <ITEM_ID>", options: [], examples: ["backlog lock P1.M1"] },
   log: { summary: "Show recent activity log.", usage: "backlog log [--bugs, -b] [--ideas, -i] [--limit N] [--json]", options: ["--bugs, -b", "--ideas, -i", "--limit", "--json"], examples: ["backlog log", "backlog log --bugs --ideas --limit 20 --json"] },
   migrate: { summary: "Migrate .tasks/ to .backlog/.", usage: "backlog migrate [--force] [--no-symlink]", options: ["--force", "--no-symlink"], examples: ["backlog migrate"] },
@@ -1056,6 +1056,78 @@ function makeProgressBarWithInProgress(
   )}`;
 }
 
+function collectAvailableIds(
+  tree: TaskTree,
+  availableIds: string[],
+  statusFilter: string[],
+  includeNormal: boolean,
+  includeBugs: boolean,
+  includeIdeas: boolean,
+  scopedTaskIds?: Set<string>,
+): string[] {
+  const ids: string[] = [];
+  for (const taskId of availableIds) {
+    if (scopedTaskIds && !scopedTaskIds.has(taskId)) continue;
+    const isBug = isBugId(taskId);
+    const isIdea = isIdeaId(taskId);
+    if (isBug && !includeBugs) continue;
+    if (isIdea && !includeIdeas) continue;
+    if (!isBug && !isIdea && !includeNormal) continue;
+    const task = findTask(tree, taskId);
+    if (!task) continue;
+    if (statusFilter.length && !statusFilter.includes(task.status)) continue;
+    ids.push(taskId);
+  }
+  return ids;
+}
+
+function collectListIds(
+  tree: TaskTree,
+  statusFilter: string[],
+  unfinished: boolean,
+  showCompletedAux: boolean,
+  includeNormal: boolean,
+  includeBugs: boolean,
+  includeIdeas: boolean,
+  scopedPhases?: Phase[],
+  scopedTaskIds?: Set<string>,
+): string[] {
+  const ids: string[] = [];
+  const phasesSource = scopedPhases ?? (includeNormal ? tree.phases : []);
+  if (includeNormal) {
+    for (const phase of phasesSource) {
+      for (const milestone of phase.milestones) {
+        for (const epic of milestone.epics) {
+          for (const task of epic.tasks) {
+            if (scopedTaskIds && !scopedTaskIds.has(task.id)) continue;
+            if (statusFilter.length && !statusFilter.includes(task.status)) continue;
+            if (unfinished && !isUnfinished(task.status)) continue;
+            ids.push(task.id);
+          }
+        }
+      }
+    }
+  }
+
+  if (includeBugs) {
+    for (const bug of tree.bugs ?? []) {
+      if (statusFilter.length && !statusFilter.includes(bug.status)) continue;
+      if (!includeAuxItem(bug.status, unfinished, showCompletedAux)) continue;
+      ids.push(bug.id);
+    }
+  }
+
+  if (includeIdeas) {
+    for (const idea of tree.ideas ?? []) {
+      if (statusFilter.length && !statusFilter.includes(idea.status)) continue;
+      if (!includeAuxItem(idea.status, unfinished, showCompletedAux)) continue;
+      ids.push(idea.id);
+    }
+  }
+
+  return ids;
+}
+
 function listWithProgress(
   tree: TaskTree,
   unfinished: boolean,
@@ -1287,7 +1359,14 @@ function listAvailable(
 
 async function cmdList(args: string[]): Promise<void> {
   const outputJson = parseFlag(args, "--json");
-  const statusFilter = parseOpt(args, "--status")?.split(",") ?? [];
+  const idsOnly = parseFlag(args, "--ids-only");
+  if (idsOnly && outputJson) {
+    textError(
+      "--ids-only cannot be used with --json\n" +
+        "Tip: use `backlog list --ids-only` for plain IDs (one per line), or `backlog list --json` for structured output",
+    );
+  }
+  const statusFilter = parseOpt(args, "--status")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   const showAll = parseFlag(args, "--all");
   const unfinished = parseFlag(args, "--unfinished");
   const bugsOnly = parseFlag(args, "--bugs") || parseFlag(args, "-b");
@@ -1324,7 +1403,7 @@ async function cmdList(args: string[]): Promise<void> {
   const { criticalPath, nextAvailable } = calc.calculate(true);
   tree.criticalPath = criticalPath;
   tree.nextAvailable = nextAvailable;
-  if (!outputJson) {
+  if (!outputJson && !idsOnly) {
     warnNonTaskCycle(calc);
   }
 
@@ -1387,6 +1466,41 @@ async function cmdList(args: string[]): Promise<void> {
     if (scopeDepths.length > 0) {
       scopeMaxDepth = Math.min(4, Math.max(...scopeDepths) + 2);
     }
+  }
+
+  if (idsOnly) {
+    if (available) {
+      let allAvailable = calc.findAllAvailable();
+      if (scopedTaskIds) {
+        allAvailable = allAvailable.filter((taskId) => scopedTaskIds!.has(taskId));
+      }
+      for (const id of collectAvailableIds(
+        tree,
+        allAvailable,
+        statusFilter,
+        includeNormal,
+        includeBugs,
+        includeIdeas,
+        scopedTaskIds,
+      )) {
+        console.log(id);
+      }
+      return;
+    }
+    for (const id of collectListIds(
+      tree,
+      statusFilter,
+      unfinished,
+      effectiveShowCompletedAux,
+      includeNormal,
+      includeBugs,
+      includeIdeas,
+      scopedPhases,
+      scopedTaskIds,
+    )) {
+      console.log(id);
+    }
+    return;
   }
 
   if (showProgress) {

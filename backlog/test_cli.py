@@ -2046,6 +2046,61 @@ def test_list_unfinished_filters_completed(runner, tmp_tasks_dir):
     assert "M1) (1/2 tasks done)" in result.output
 
 
+def test_list_ids_only_prints_one_id_per_line(runner, tmp_tasks_dir):
+    """list --ids-only prints bare task/bug IDs suitable for piping."""
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Task 1", status="pending")
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T002", "Task 2", status="done")
+    create_bug_file(tmp_tasks_dir, "B001", "Open Bug", status="pending")
+    create_bug_file(tmp_tasks_dir, "B002", "Done Bug", status="done")
+
+    result = runner.invoke(cli, ["list", "--ids-only"])
+    assert result.exit_code == 0
+    lines = [ln.strip() for ln in result.output.strip().splitlines() if ln.strip()]
+    assert lines == [ln for ln in lines if " " not in ln]
+    assert "P1.M1.E1.T001" in lines
+    assert "P1.M1.E1.T002" in lines
+    assert "B001" in lines
+    assert "B002" not in lines  # completed aux hidden by default
+
+
+def test_list_ids_only_composes_with_filters(runner, tmp_tasks_dir):
+    """list --ids-only respects --bugs/--unfinished/scopes/--available."""
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Task 1", status="pending")
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T002", "Task 2", status="done")
+    create_bug_file(tmp_tasks_dir, "B001", "Open Bug", status="pending")
+
+    bugs_only = runner.invoke(cli, ["list", "--bugs", "--ids-only"])
+    assert bugs_only.exit_code == 0
+    assert bugs_only.output.strip() == "B001"
+
+    unfinished = runner.invoke(cli, ["list", "--unfinished", "--ids-only"])
+    assert unfinished.exit_code == 0
+    unfinished_ids = unfinished.output.strip().splitlines()
+    assert "P1.M1.E1.T001" in unfinished_ids
+    assert "P1.M1.E1.T002" not in unfinished_ids
+
+    scoped = runner.invoke(cli, ["list", "P1.M1.E1", "--ids-only"])
+    assert scoped.exit_code == 0
+    scoped_ids = scoped.output.strip().splitlines()
+    assert "P1.M1.E1.T001" in scoped_ids
+    assert "P1.M1.E1.T002" in scoped_ids
+    assert "B001" not in scoped_ids
+
+    available = runner.invoke(cli, ["list", "--available", "--ids-only"])
+    assert available.exit_code == 0
+    for line in available.output.strip().splitlines():
+        assert " " not in line
+        assert "Available" not in line
+
+
+def test_list_ids_only_rejects_json(runner, tmp_tasks_dir):
+    """list --ids-only and --json are mutually exclusive."""
+    create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Task 1", status="pending")
+    result = runner.invoke(cli, ["list", "--ids-only", "--json"])
+    assert result.exit_code != 0
+    assert "--ids-only cannot be used with --json" in result.output
+
+
 def test_list_json_includes_milestone_metadata(runner, tmp_tasks_dir):
     """Test list --json includes milestone metadata."""
     create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Task 1", status="pending")

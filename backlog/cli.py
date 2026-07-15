@@ -842,6 +842,11 @@ def _resolve_list_scope(tree, raw_scope):
 )
 @click.option("--progress", "show_progress", is_flag=True, help="Show progress bars")
 @click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+@click.option(
+    "--ids-only",
+    is_flag=True,
+    help="Print one matching task/item ID per line (for piping); mutually exclusive with --json",
+)
 @click.option("--all", "show_all", is_flag=True, help="Show all milestones (no limit)")
 @click.option("--unfinished", is_flag=True, help="Show only unfinished items")
 @click.option("-b", "--bugs", is_flag=True, help="Show only bug tasks")
@@ -863,6 +868,7 @@ def list(
     priority,
     show_progress,
     output_json,
+    ids_only,
     show_all,
     unfinished,
     bugs,
@@ -872,6 +878,12 @@ def list(
 ):
     """List tasks with filtering options."""
     try:
+        if ids_only and output_json:
+            raise ValueError(
+                "--ids-only cannot be used with --json\n"
+                "Tip: use `backlog list --ids-only` for plain IDs (one per line), "
+                "or `backlog list --json` for structured output"
+            )
         loader = TaskLoader()
         include_normal = not bugs and not ideas
         include_bugs = bugs or (not bugs and not ideas)
@@ -893,7 +905,7 @@ def list(
         critical_path, next_available = calc.calculate(explicit_only=True)
         tree.critical_path = critical_path
         tree.next_available = next_available
-        if not output_json:
+        if not output_json and not ids_only:
             _warn_missing_task_files(tree)
             _warn_non_task_cycle(calc)
 
@@ -946,6 +958,45 @@ def list(
         effective_show_completed_aux = show_completed_aux or (show_all and (bugs or ideas))
         if scoped:
             effective_show_completed_aux = False
+
+        status_values = None
+        if status:
+            status_values = {s.strip() for s in status.split(",") if s.strip()}
+
+        # Handle --ids-only flag (plain IDs for piping)
+        if ids_only:
+            if available:
+                all_available = calc.find_all_available()
+                if scope_task_ids is not None:
+                    all_available = [t for t in all_available if t in scope_task_ids]
+                ids = _collect_available_ids(
+                    tree,
+                    all_available,
+                    complexity,
+                    priority,
+                    include_normal,
+                    include_bugs,
+                    include_ideas,
+                    scoped_phases,
+                    status_values,
+                )
+            else:
+                ids = _collect_list_ids(
+                    tree,
+                    complexity,
+                    priority,
+                    unfinished,
+                    effective_show_completed_aux,
+                    include_normal,
+                    include_bugs,
+                    include_ideas,
+                    scoped_phases,
+                    scope_task_ids,
+                    status_values,
+                )
+            for item_id in ids:
+                click.echo(item_id)
+            return
 
         # Handle --progress flag
         if show_progress:
@@ -1023,13 +1074,113 @@ def list(
         raise click.Abort()
 
 
-def _task_matches_filters(task, complexity=None, priority=None):
-    """Return True when a task matches complexity/priority filters."""
+def _task_matches_filters(task, complexity=None, priority=None, status_values=None):
+    """Return True when a task matches complexity/priority/status filters."""
     if complexity and task.complexity.value != complexity:
         return False
     if priority and task.priority.value != priority:
         return False
+    if status_values and task.status.value not in status_values:
+        return False
     return True
+
+
+def _collect_available_ids(
+    tree,
+    all_available,
+    complexity=None,
+    priority=None,
+    include_normal=True,
+    include_bugs=True,
+    include_ideas=True,
+    scoped_phases=None,
+    status_values=None,
+):
+    """Collect IDs for list --available --ids-only."""
+    scope_phases = (
+        {p.id for p in scoped_phases} if scoped_phases is not None else None
+    )
+    ids = []
+    for task_id in all_available:
+        task = _find_list_task(tree, task_id)
+        if not task:
+            continue
+        if not _task_matches_filters(task, complexity, priority, status_values):
+            continue
+        if scope_phases is not None:
+            try:
+                task_phase = TaskPath.parse(task_id).phase
+            except ValueError:
+                continue
+            if task_phase not in scope_phases:
+                continue
+        if (
+            (task_id.startswith("B") and include_bugs)
+            or (task_id.startswith("I") and include_ideas)
+            or (
+                not task_id.startswith("B")
+                and not task_id.startswith("I")
+                and include_normal
+            )
+        ):
+            ids.append(task_id)
+    return ids
+
+
+def _collect_list_ids(
+    tree,
+    complexity=None,
+    priority=None,
+    unfinished=False,
+    show_completed_aux=False,
+    include_normal=True,
+    include_bugs=True,
+    include_ideas=True,
+    scoped_phases=None,
+    scope_task_ids=None,
+    status_values=None,
+):
+    """Collect task/bug/idea IDs matching list filters for --ids-only."""
+    ids = []
+    phases_to_show = (
+        scoped_phases
+        if scoped_phases is not None
+        else tree.phases
+        if include_normal
+        else []
+    )
+    if include_normal:
+        for phase in phases_to_show:
+            for milestone in phase.milestones:
+                for epic in milestone.epics:
+                    for task in epic.tasks:
+                        if unfinished and not _is_unfinished(task.status):
+                            continue
+                        if not _task_matches_filters(
+                            task, complexity, priority, status_values
+                        ):
+                            continue
+                        if scope_task_ids is not None and task.id not in scope_task_ids:
+                            continue
+                        ids.append(task.id)
+
+    if include_bugs:
+        for bug in getattr(tree, "bugs", []):
+            if not _include_aux_item(bug.status, unfinished, show_completed_aux):
+                continue
+            if not _task_matches_filters(bug, complexity, priority, status_values):
+                continue
+            ids.append(bug.id)
+
+    if include_ideas:
+        for idea in getattr(tree, "ideas", []):
+            if not _include_aux_item(idea.status, unfinished, show_completed_aux):
+                continue
+            if not _task_matches_filters(idea, complexity, priority, status_values):
+                continue
+            ids.append(idea.id)
+
+    return ids
 
 
 def _is_unfinished(status):

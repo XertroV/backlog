@@ -1868,6 +1868,7 @@ func printListHelp() {
 			"--priority            Filter by priority (low|medium|high|critical)",
 			"--progress            Show progress bars",
 			"--json                Output JSON",
+			"--ids-only            Print one matching task/item ID per line (for piping); mutually exclusive with --json",
 			"--all                 Show all milestones (no limit)",
 			"--unfinished          Show only unfinished items",
 			"--bugs, -b            Show only bug tasks",
@@ -1881,6 +1882,8 @@ func printListHelp() {
 		[]string{
 			"backlog list",
 			"backlog list --json",
+			"backlog list --ids-only",
+			"backlog list --available --ids-only",
 			"backlog list P1.M1 --progress",
 			"backlog list P1.M1 P2.M1 --json",
 			"backlog list --phase P1 --bugs",
@@ -3915,6 +3918,7 @@ func runListCore(command string, args []string) error {
 			"--priority":           true,
 			"--progress":           true,
 			"--json":               true,
+			"--ids-only":           true,
 			"--all":                true,
 			"--unfinished":         true,
 			"--bugs":               true,
@@ -3961,6 +3965,13 @@ func runListCore(command string, args []string) error {
 	}
 
 	outputJSON := parseFlag(args, "--json")
+	idsOnly := parseFlag(args, "--ids-only")
+	if idsOnly && outputJSON {
+		return printListUsageError(errors.New(
+			"--ids-only cannot be used with --json\n" +
+				"Tip: use `backlog list --ids-only` for plain IDs (one per line), or `backlog list --json` for structured output",
+		))
+	}
 	statusFilterRaw := parseOption(args, "--status")
 	showAll := parseFlag(args, "--all")
 	unfinished := parseFlag(args, "--unfinished")
@@ -4040,7 +4051,8 @@ func runListCore(command string, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !outputJSON {
+	// Keep stdout clean for machine-readable modes (--json / --ids-only).
+	if !outputJSON && !idsOnly {
 		warnMissingTaskFiles(tree, dataDir)
 	}
 	calculator := critical_path.NewCriticalPathCalculator(tree, map[string]float64{})
@@ -4048,7 +4060,7 @@ func runListCore(command string, args []string) error {
 	if err != nil {
 		return err
 	}
-	if !outputJSON {
+	if !outputJSON && !idsOnly {
 		warnNonTaskCycle(calculator)
 	}
 	availableTaskIDs := taskIDSet(calculator.FindAllAvailable())
@@ -4116,6 +4128,10 @@ func runListCore(command string, args []string) error {
 			return false
 		}
 		return true
+	}
+
+	if idsOnly {
+		return renderListIDsOnly(tree, calculator, availableOnly, scoped, scopedPhases, scopedTasks, taskMatches, includeNormal, includeBugs, includeIdeas, unfinished, effectiveShowCompletedAux)
 	}
 
 	if showProgress {
@@ -8113,6 +8129,124 @@ func hasUnfinishedTasks(tasks []models.Task) bool {
 		}
 	}
 	return false
+}
+
+func collectListAvailableIDs(tree models.TaskTree, calculator *critical_path.CriticalPathCalculator, scopedTasks []string, taskMatches func(models.Task) bool, includeNormal, includeBugs, includeIdeas bool) []string {
+	scoped := map[string]struct{}{}
+	for _, id := range scopedTasks {
+		scoped[id] = struct{}{}
+	}
+
+	ids := []string{}
+	for _, taskID := range calculator.FindAllAvailable() {
+		task := findTask(tree, taskID)
+		if task == nil {
+			continue
+		}
+		if !taskMatches(*task) {
+			continue
+		}
+		if !includeNormal {
+			if isBugLikeID(task.ID) && !includeBugs {
+				continue
+			}
+			if isIdeaLikeID(task.ID) && !includeIdeas {
+				continue
+			}
+			if !isBugLikeID(task.ID) && !isIdeaLikeID(task.ID) {
+				continue
+			}
+		}
+		if len(scoped) > 0 {
+			if _, ok := scoped[task.ID]; !ok {
+				continue
+			}
+		}
+		ids = append(ids, task.ID)
+	}
+	return ids
+}
+
+func collectListItemIDs(tree models.TaskTree, scoped bool, scopedPhases []models.Phase, scopedTasks []string, taskMatches func(models.Task) bool, includeNormal, includeBugs, includeIdeas, unfinished, showCompletedAux bool) []string {
+	phasesSource := scopedPhases
+	if !scoped {
+		if includeNormal {
+			phasesSource = tree.Phases
+		} else {
+			phasesSource = []models.Phase{}
+		}
+	}
+
+	scopedSet := map[string]struct{}{}
+	for _, id := range scopedTasks {
+		scopedSet[id] = struct{}{}
+	}
+
+	ids := []string{}
+	if includeNormal {
+		for _, phase := range phasesSource {
+			for _, milestone := range phase.Milestones {
+				for _, epic := range milestone.Epics {
+					for _, task := range epic.Tasks {
+						if !taskMatches(task) {
+							continue
+						}
+						if len(scopedSet) > 0 {
+							if _, ok := scopedSet[task.ID]; !ok {
+								continue
+							}
+						}
+						ids = append(ids, task.ID)
+					}
+				}
+			}
+		}
+	}
+
+	if includeBugs {
+		for _, bug := range tree.Bugs {
+			if bug.ID == "" {
+				continue
+			}
+			if !taskMatches(bug) {
+				continue
+			}
+			if !includeCompletionAux(bug.Status, unfinished, showCompletedAux) {
+				continue
+			}
+			ids = append(ids, bug.ID)
+		}
+	}
+
+	if includeIdeas {
+		for _, idea := range tree.Ideas {
+			if idea.ID == "" {
+				continue
+			}
+			if !taskMatches(idea) {
+				continue
+			}
+			if !includeCompletionAux(idea.Status, unfinished, showCompletedAux) {
+				continue
+			}
+			ids = append(ids, idea.ID)
+		}
+	}
+
+	return ids
+}
+
+func renderListIDsOnly(tree models.TaskTree, calculator *critical_path.CriticalPathCalculator, availableOnly, scoped bool, scopedPhases []models.Phase, scopedTasks []string, taskMatches func(models.Task) bool, includeNormal, includeBugs, includeIdeas, unfinished, showCompletedAux bool) error {
+	var ids []string
+	if availableOnly {
+		ids = collectListAvailableIDs(tree, calculator, scopedTasks, taskMatches, includeNormal, includeBugs, includeIdeas)
+	} else {
+		ids = collectListItemIDs(tree, scoped, scopedPhases, scopedTasks, taskMatches, includeNormal, includeBugs, includeIdeas, unfinished, showCompletedAux)
+	}
+	for _, id := range ids {
+		fmt.Println(id)
+	}
+	return nil
 }
 
 func renderListProgress(tree models.TaskTree, criticalPath []string, scoped bool, scopedPhases []models.Phase, _ string, _ string, _ string, _ string, _ int, taskMatches func(models.Task) bool) error {

@@ -3300,6 +3300,139 @@ func TestRunListBugsAndIdeasFlags(t *testing.T) {
 	}
 }
 
+func TestRunListIdsOnlyPrintsOneIDPerLine(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+	output, err := runInDir(t, root, "list", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list --ids-only = %v, expected nil", err)
+	}
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	if len(lines) == 0 {
+		t.Fatalf("output empty, expected IDs")
+	}
+	expected := map[string]bool{
+		"P1.M1.E1.T001": true,
+		"P1.M1.E1.T002": true,
+		"P1.M1.E2.T001": true,
+		"P1.M2.E1.T001": true,
+		"B1":            true,
+		"I1":            true,
+	}
+	got := map[string]bool{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.Contains(line, " ") {
+			t.Fatalf("ids-only line %q contains spaces/decorations", line)
+		}
+		got[line] = true
+	}
+	for id := range expected {
+		if !got[id] {
+			t.Fatalf("output = %q, missing expected ID %s", output, id)
+		}
+	}
+	if len(got) != len(expected) {
+		t.Fatalf("got %d IDs %v, want %d %v", len(got), got, len(expected), expected)
+	}
+}
+
+func TestRunListIdsOnlyComposesWithFilters(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+
+	bugsOutput, err := runInDir(t, root, "list", "--bugs", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list --bugs --ids-only = %v, expected nil", err)
+	}
+	if strings.TrimSpace(bugsOutput) != "B1" {
+		t.Fatalf("bugs ids-only = %q, want B1", bugsOutput)
+	}
+
+	ideasOutput, err := runInDir(t, root, "list", "--ideas", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list --ideas --ids-only = %v, expected nil", err)
+	}
+	if strings.TrimSpace(ideasOutput) != "I1" {
+		t.Fatalf("ideas ids-only = %q, want I1", ideasOutput)
+	}
+
+	scopeOutput, err := runInDir(t, root, "list", "P1.M1.E1", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list P1.M1.E1 --ids-only = %v, expected nil", err)
+	}
+	scopeLines := strings.Split(strings.TrimSpace(scopeOutput), "\n")
+	scopeSet := map[string]bool{}
+	for _, line := range scopeLines {
+		scopeSet[strings.TrimSpace(line)] = true
+	}
+	if !scopeSet["P1.M1.E1.T001"] || !scopeSet["P1.M1.E1.T002"] {
+		t.Fatalf("scoped ids-only = %q, expected E1 task IDs", scopeOutput)
+	}
+	if scopeSet["P1.M1.E2.T001"] || scopeSet["B1"] || scopeSet["I1"] {
+		t.Fatalf("scoped ids-only = %q, expected only E1 tasks", scopeOutput)
+	}
+
+	unfinishedOutput, err := runInDir(t, root, "list", "--unfinished", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list --unfinished --ids-only = %v, expected nil", err)
+	}
+	if strings.Contains(unfinishedOutput, "P1.M1.E1.T002") {
+		t.Fatalf("unfinished ids-only = %q, should exclude done task T002", unfinishedOutput)
+	}
+	if !strings.Contains(unfinishedOutput, "P1.M1.E1.T001") {
+		t.Fatalf("unfinished ids-only = %q, expected pending T001", unfinishedOutput)
+	}
+
+	availableOutput, err := runInDir(t, root, "list", "--available", "--ids-only")
+	if err != nil {
+		t.Fatalf("run list --available --ids-only = %v, expected nil", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(availableOutput), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.Contains(line, " ") || strings.Contains(line, "Available") {
+			t.Fatalf("available ids-only line %q is not a bare ID", line)
+		}
+	}
+	if !strings.Contains(availableOutput, "P1.M1.E1.T001") {
+		t.Fatalf("available ids-only = %q, expected unblocked T001", availableOutput)
+	}
+}
+
+func TestRunListIdsOnlyRejectsJSON(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+	output, err := runInDir(t, root, "list", "--ids-only", "--json")
+	if err == nil {
+		t.Fatalf("run list --ids-only --json expected error, got output %q", output)
+	}
+	if !strings.Contains(output, "--ids-only cannot be used with --json") {
+		t.Fatalf("output = %q, expected mutual exclusion error", output)
+	}
+}
+
+func TestRunListHelpMentionsIdsOnly(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	output, err := runInDir(t, root, "list", "--help")
+	if err != nil {
+		t.Fatalf("run list --help = %v, expected nil", err)
+	}
+	if !strings.Contains(output, "--ids-only") {
+		t.Fatalf("help = %q, expected --ids-only", output)
+	}
+}
+
 func TestRunListListShortAliases(t *testing.T) {
 	t.Parallel()
 
