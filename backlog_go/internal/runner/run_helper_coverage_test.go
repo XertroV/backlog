@@ -110,12 +110,21 @@ func TestAdvanceCycleContextBranches(t *testing.T) {
 	if err := taskcontext.SetSiblingTaskContext(dataDir, "cli-user", "P1.M1.E1.T001", []string{"P1.M1.E1.T002", "P1.M1.E1.T003"}); err != nil {
 		t.Fatalf("SetSiblingTaskContext() = %v", err)
 	}
-	handled, err := advanceCycleContext("P1.M1.E1.T002", "cli-user", dataDir)
+	// captureStdout holds runInDirMu so sibling/multi progress messages cannot
+	// leak into parallel tests that redirect os.Stdout for JSON capture.
+	var handled bool
+	var err error
+	siblingOut := captureStdout(t, func() {
+		handled, err = advanceCycleContext("P1.M1.E1.T002", "cli-user", dataDir)
+	})
 	if err != nil {
 		t.Fatalf("advanceCycleContext(sibling) = %v", err)
 	}
 	if !handled {
 		t.Fatal("expected sibling context to be handled")
+	}
+	if !strings.Contains(siblingOut, "Sibling task completed. Returning to primary:") {
+		t.Fatalf("sibling output = %q, expected sibling completion message", siblingOut)
 	}
 
 	ctx, err := taskcontext.LoadContext(dataDir)
@@ -129,12 +138,17 @@ func TestAdvanceCycleContextBranches(t *testing.T) {
 	if err := taskcontext.SetMultiTaskContext(dataDir, "cli-user", "P1.M1.E1.T001", []string{"P1.M1.E1.T002"}); err != nil {
 		t.Fatalf("SetMultiTaskContext() = %v", err)
 	}
-	handled, err = advanceCycleContext("P1.M1.E1.T001", "cli-user", dataDir)
+	multiOut := captureStdout(t, func() {
+		handled, err = advanceCycleContext("P1.M1.E1.T001", "cli-user", dataDir)
+	})
 	if err != nil {
 		t.Fatalf("advanceCycleContext(multi primary) = %v", err)
 	}
 	if !handled {
 		t.Fatal("expected multi context to be handled")
+	}
+	if !strings.Contains(multiOut, "Primary task completed. Additional tasks still active.") {
+		t.Fatalf("multi output = %q, expected multi completion message", multiOut)
 	}
 
 	ctx, err = taskcontext.LoadContext(dataDir)
