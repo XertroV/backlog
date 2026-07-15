@@ -1,14 +1,18 @@
 ---
+claimed_at: "2026-07-15T03:18:49Z"
+claimed_by: cli-user
+completed_at: null
 complexity: medium
 created_at: "2026-07-15T03:17:39Z"
 depends_on: []
 estimate_hours: 1
 id: B020
 priority: high
-status: pending
+started_at: "2026-07-15T03:18:49Z"
+status: in_progress
 tags: []
 title: When git commits are made, the client should print that in stdout. similarly, failing to make a git commit should print out a warning + instructions for how to fix
-updated_at: "2026-07-15T03:17:39Z"
+updated_at: "2026-07-15T03:18:49Z"
 ---
 
 When git commits are made, the client should print that in stdout. similarly, failing to make a git commit should print out a warning + instructions for how to fix
