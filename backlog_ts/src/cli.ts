@@ -2137,7 +2137,10 @@ async function cmdShow(args: string[]): Promise<void> {
         const auxTree = tree ?? (tree = await loader.load("metadata"));
         const aux = [...(auxTree.bugs ?? []), ...(auxTree.ideas ?? [])].find((t) => t.id === id);
         if (!aux) textError(`Task not found: ${id}`);
-        console.log(`${aux.id}: ${aux.title}\nstatus=${aux.status} estimate=${aux.estimateHours}`);
+        console.log(`${aux.id}: ${aux.title}`);
+        console.log(`Status: ${aux.status}`);
+        console.log(`Estimate: ${aux.estimateHours}`);
+        printTaskFileShowContent(aux, showLong, showAll);
         if (isIdeaId(id) && aux.status === Status.PENDING) {
           showIdeaInstructions(aux);
         }
@@ -2176,51 +2179,59 @@ async function cmdShow(args: string[]): Promise<void> {
     if (!t) showNotFound("Task", id, scopeHint);
     console.log(`${t.id}: ${t.title}\nstatus=${t.status} estimate=${t.estimateHours}`);
     renderTaskDependencyOverview(t, fullTree ?? scopeTree);
-    const taskFile = taskFilePath(t);
-    const taskFilePathData = existsSync(taskFile) ? readFileSync(taskFile, "utf8") : null;
-    if (taskFilePathData !== null) {
-      const taskFileLineCount =
-        taskFilePathData === "" ? 0 : taskFilePathData.replace(/\r?\n$/, "").split(/\r?\n/).length;
-      const taskFileSize = statSync(taskFile).size;
-      console.log(`File: ${taskFile}`);
-      console.log(`File stats: ${taskFileSize} bytes, ${taskFileLineCount} lines`);
-    } else {
-      console.log(`File: ${taskFile}`);
-    }
-    const { warnings, missing: isMissing, body } = parseTodoFrontmatter(taskFile, t.id);
-    printTodoFileWarnings(warnings);
-    if (isMissing) {
-      continue;
-    }
-    if (showAll) {
-      console.log(pc.bold("Task file:"));
-      if (taskFilePathData !== null) {
-        const fullTaskFileText = taskFilePathData.replace(/\r?\n$/, "");
-        for (const line of fullTaskFileText.split(/\r?\n/)) {
-          console.log(`  ${line}`);
-        }
-      } else {
-        console.log(pc.dim(`  Missing task file: ${taskFile}`));
-      }
-      continue;
-    }
+    printTaskFileShowContent(t, showLong, showAll);
+  }
+}
 
-    const bodyLines = body.trim().split("\n");
-    if (bodyLines.length > 0 && bodyLines[0] !== "") {
-      console.log(pc.bold("Body:"));
-      if (showLong) {
-        for (const line of bodyLines) {
-          console.log(`  ${line}`);
-        }
-      } else {
-        const limit = Math.min(TASK_PREVIEW_LINES, bodyLines.length);
-        for (const line of bodyLines.slice(0, limit)) {
-          console.log(`  ${line}`);
-        }
-        if (bodyLines.length > limit) {
-          console.log(pc.dim(`  ... (${bodyLines.length - limit} more lines)`));
-          console.log(pc.dim(`To view the full file, run: cat ${taskFile}`));
-        }
+function printTaskFileShowContent(
+  task: Pick<Task, "id" | "file">,
+  showLong: boolean,
+  showAll: boolean,
+): void {
+  const taskFile = taskFilePath(task);
+  const taskFilePathData = existsSync(taskFile) ? readFileSync(taskFile, "utf8") : null;
+  if (taskFilePathData !== null) {
+    const taskFileLineCount =
+      taskFilePathData === "" ? 0 : taskFilePathData.replace(/\r?\n$/, "").split(/\r?\n/).length;
+    const taskFileSize = statSync(taskFile).size;
+    console.log(`File: ${taskFile}`);
+    console.log(`File stats: ${taskFileSize} bytes, ${taskFileLineCount} lines`);
+  } else {
+    console.log(`File: ${taskFile}`);
+  }
+  const { warnings, missing: isMissing, body } = parseTodoFrontmatter(taskFile, task.id);
+  printTodoFileWarnings(warnings);
+  if (isMissing) {
+    return;
+  }
+  if (showAll) {
+    console.log(pc.bold("Task file:"));
+    if (taskFilePathData !== null) {
+      const fullTaskFileText = taskFilePathData.replace(/\r?\n$/, "");
+      for (const line of fullTaskFileText.split(/\r?\n/)) {
+        console.log(`  ${line}`);
+      }
+    } else {
+      console.log(pc.dim(`  Missing task file: ${taskFile}`));
+    }
+    return;
+  }
+
+  const bodyLines = body.trim().split("\n");
+  if (bodyLines.length > 0 && bodyLines[0] !== "") {
+    console.log(pc.bold("Body:"));
+    if (showLong) {
+      for (const line of bodyLines) {
+        console.log(`  ${line}`);
+      }
+    } else {
+      const limit = Math.min(TASK_PREVIEW_LINES, bodyLines.length);
+      for (const line of bodyLines.slice(0, limit)) {
+        console.log(`  ${line}`);
+      }
+      if (bodyLines.length > limit) {
+        console.log(pc.dim(`  ... (${bodyLines.length - limit} more lines)`));
+        console.log(pc.dim(`To view the full file, run: cat ${taskFile}`));
       }
     }
   }

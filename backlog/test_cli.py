@@ -3270,6 +3270,106 @@ def test_show_task_all_prints_entire_task_file(runner, tmp_tasks_dir):
     assert "To view the full file, run: cat" not in result.output
 
 
+def test_show_bug_prints_file_stats_and_body_preview(runner, tmp_tasks_dir):
+    """show for bugs should include file stats and body preview like tasks."""
+    bug_file = create_bug_file(tmp_tasks_dir, "B001", "Critical Bug")
+    body_lines = [f"bug-line-{i:02d}" for i in range(1, 14)]
+    frontmatter = "\n".join(
+        [
+            "---",
+            "id: B001",
+            "title: Critical Bug",
+            "status: pending",
+            "estimate_hours: 3.0",
+            "complexity: high",
+            "priority: critical",
+            "depends_on: []",
+            "tags:",
+            "- bug",
+            "---",
+            "",
+        ]
+    )
+    bug_file.write_text(frontmatter + "\n".join(body_lines) + "\n")
+
+    result = runner.invoke(cli, ["show", "B001"])
+    assert result.exit_code == 0
+    file_contents = bug_file.read_text()
+    assert (
+        f"File stats: {bug_file.stat().st_size} bytes, {len(file_contents.splitlines())} lines"
+        in result.output
+    )
+    assert "Body:" in result.output
+    assert "bug-line-12" in result.output
+    assert "bug-line-13" not in result.output
+    assert "... (1 more lines)" in result.output
+    assert "To view the full file, run: cat" in result.output
+
+
+def test_show_bug_long_and_all_flags(runner, tmp_tasks_dir):
+    """show --long/--all for bugs should print full body or full file."""
+    bug_file = create_bug_file(tmp_tasks_dir, "B001", "Critical Bug")
+    body_lines = [f"bug-line-{i:02d}" for i in range(1, 14)]
+    frontmatter = "\n".join(
+        [
+            "---",
+            "id: B001",
+            "title: Critical Bug",
+            "status: pending",
+            "estimate_hours: 3.0",
+            "complexity: high",
+            "priority: critical",
+            "depends_on: []",
+            "tags:",
+            "- bug",
+            "---",
+            "",
+        ]
+    )
+    bug_file.write_text(frontmatter + "\n".join(body_lines) + "\n")
+
+    long_result = runner.invoke(cli, ["show", "B001", "--long"])
+    assert long_result.exit_code == 0
+    assert "bug-line-13" in long_result.output
+    assert "To view the full file, run: cat" not in long_result.output
+
+    all_result = runner.invoke(cli, ["show", "B001", "--all"])
+    assert all_result.exit_code == 0
+    assert "Task file:" in all_result.output
+    assert "id: B001" in all_result.output
+    assert "bug-line-13" in all_result.output
+
+
+def test_show_idea_prints_file_stats_and_body_preview(runner, tmp_tasks_dir):
+    """show for ideas should include file stats and body preview."""
+    idea = runner.invoke(cli, ["idea", "Plan hex IDs"])
+    assert idea.exit_code == 0
+    assert "Created idea: I001" in idea.output
+
+    idea_file = tmp_tasks_dir / ".tasks" / "ideas"
+    idea_paths = list(idea_file.glob("I001-*.todo"))
+    assert idea_paths, "expected idea file to exist"
+    path = idea_paths[0]
+    body_lines = [f"idea-line-{i:02d}" for i in range(1, 14)]
+    # Preserve frontmatter, replace body for predictable preview assertions.
+    text = path.read_text()
+    parts = text.split("---\n", 2)
+    assert len(parts) >= 3
+    path.write_text("---\n" + parts[1] + "---\n" + "\n".join(body_lines) + "\n")
+
+    result = runner.invoke(cli, ["show", "I001"])
+    assert result.exit_code == 0
+    file_contents = path.read_text()
+    assert (
+        f"File stats: {path.stat().st_size} bytes, {len(file_contents.splitlines())} lines"
+        in result.output
+    )
+    assert "Body:" in result.output
+    assert "idea-line-12" in result.output
+    assert "idea-line-13" not in result.output
+    assert "Instructions:" in result.output
+
+
 def test_cat_single_task_prints_complete_task_file(runner, tmp_tasks_dir):
     """cat should print the raw .todo task file contents."""
     task_file = create_task_file(tmp_tasks_dir, "P1.M1.E1.T001", "Test Task")

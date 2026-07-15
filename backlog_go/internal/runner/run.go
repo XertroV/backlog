@@ -4461,7 +4461,14 @@ func runShow(args []string, showNext bool, showLong bool, showAll bool) error {
 			if err != nil {
 				return err
 			}
-			renderBugOrIdeaDetail(*auxTask, isIdeaLikeID(id) && auxTask.Status == models.StatusPending, dataDir, showNext)
+			renderBugOrIdeaDetail(
+				*auxTask,
+				isIdeaLikeID(id) && auxTask.Status == models.StatusPending,
+				dataDir,
+				showNext,
+				showLong,
+				showAll,
+			)
 			continue
 		}
 		scopePath, err := models.ParseTaskPath(id)
@@ -8725,7 +8732,7 @@ func renderListScopeEpic(epic models.Epic, taskMatches func(models.Task) bool, c
 	return lines
 }
 
-func renderBugOrIdeaDetail(task models.Task, showInstructions bool, dataDir string, showNext bool) {
+func renderBugOrIdeaDetail(task models.Task, showInstructions bool, dataDir string, showNext bool, showLong bool, showAll bool) {
 	fmt.Printf("%s: %s\n", styleSuccess(task.ID), task.Title)
 	fmt.Printf("%s: %s\n", styleSubHeader("Status"), styleStatusText(string(task.Status)))
 	fmt.Printf("%s: %.2fh\n", styleSubHeader("Estimate"), task.EstimateHours)
@@ -8733,12 +8740,47 @@ func renderBugOrIdeaDetail(task models.Task, showInstructions bool, dataDir stri
 	if len(task.Tags) > 0 {
 		fmt.Printf("%s: %s\n", styleSubHeader("Tags"), strings.Join(task.Tags, ", "))
 	}
-	if showInstructions {
-		fmt.Println(styleWarning("Idea instructions: evaluate feasibility and create concrete tasks in backlog."))
-	}
 	file := filepath.Join(dataDir, task.File)
 	if task.File != "" {
 		fmt.Printf("%s: %s\n", styleSubHeader("File"), file)
+	}
+	if fileSize, fileLines, err := taskFileStats(file); err == nil {
+		fmt.Printf("%s: %d bytes, %d lines\n", styleSubHeader("File stats"), fileSize, fileLines)
+	}
+	_, body, warnings, missing, err := readTodoFrontmatter(task.ID, task.File)
+	if err == nil {
+		printTodoFileWarnings(warnings)
+		if !missing {
+			if showAll {
+				raw, rawErr := os.ReadFile(file)
+				fmt.Printf("%s\n", styleSubHeader("Task File"))
+				if rawErr == nil {
+					fmt.Printf("%s", string(raw))
+				} else {
+					fmt.Printf("  %s\n", styleWarning(fmt.Sprintf("Could not read full file: %s", rawErr)))
+				}
+			} else {
+				body = strings.TrimSpace(body)
+				if body != "" {
+					lines := strings.Split(body, "\n")
+					fmt.Printf("%s\n", styleSubHeader("Preview"))
+					limit := len(lines)
+					if !showLong {
+						limit = min(taskFileReadPreviewLines, len(lines))
+					}
+					for i := 0; i < limit; i++ {
+						fmt.Printf("  %s\n", lines[i])
+					}
+					if !showLong && len(lines) > limit {
+						fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("... (%d more lines)", len(lines)-limit)))
+						fmt.Printf("  %s\n", styleMuted(fmt.Sprintf("To view the full file, run: cat %s", file)))
+					}
+				}
+			}
+		}
+	}
+	if showInstructions {
+		fmt.Println(styleWarning("Idea instructions: evaluate feasibility and create concrete tasks in backlog."))
 	}
 	if showNext {
 		printNextCommands("backlog show "+task.ID, "backlog claim "+task.ID)

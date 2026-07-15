@@ -5,9 +5,11 @@ import {
   lstatSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -2944,6 +2946,98 @@ tags: []
     expect(out).toContain("tasks add");
     expect(out).toContain("Created Work Items");
     expect(out).toContain("Mark this idea as done");
+  });
+
+  test("show bug prints file stats and body preview", () => {
+    root = setupFixture(true);
+    const bugPath = join(root, ".tasks", "bugs", "B001-critical-bug.todo");
+    const bodyLines = Array.from({ length: 13 }, (_, i) => `bug-line-${String(i + 1).padStart(2, "0")}`);
+    const content = [
+      "---",
+      "id: B001",
+      "title: Critical Bug",
+      "status: pending",
+      "estimate_hours: 5",
+      "complexity: high",
+      "priority: critical",
+      "depends_on: []",
+      "tags: [bug]",
+      "---",
+      ...bodyLines,
+    ].join("\n");
+    writeFileSync(bugPath, content);
+    const size = statSync(bugPath).size;
+    const lineCount = content.split("\n").length;
+
+    const p = run(["show", "B001"], root);
+    expect(p.exitCode).toBe(0);
+    const out = p.stdout.toString();
+    expect(out).toContain(`File stats: ${size} bytes, ${lineCount} lines`);
+    expect(out).toContain("Body:");
+    expect(out).toContain("bug-line-12");
+    expect(out).not.toContain("bug-line-13");
+    expect(out).toContain("... (1 more lines)");
+    expect(out).toContain("To view the full file, run: cat ");
+  });
+
+  test("show bug --long and --all print full content", () => {
+    root = setupFixture(true);
+    const bugPath = join(root, ".tasks", "bugs", "B001-critical-bug.todo");
+    const bodyLines = Array.from({ length: 13 }, (_, i) => `bug-line-${String(i + 1).padStart(2, "0")}`);
+    writeFileSync(
+      bugPath,
+      [
+        "---",
+        "id: B001",
+        "title: Critical Bug",
+        "status: pending",
+        "estimate_hours: 5",
+        "complexity: high",
+        "priority: critical",
+        "depends_on: []",
+        "tags: [bug]",
+        "---",
+        ...bodyLines,
+      ].join("\n"),
+    );
+
+    let p = run(["show", "B001", "--long"], root);
+    expect(p.exitCode).toBe(0);
+    expect(p.stdout.toString()).toContain("bug-line-13");
+    expect(p.stdout.toString()).not.toContain("To view the full file, run: cat ");
+
+    p = run(["show", "B001", "--all"], root);
+    expect(p.exitCode).toBe(0);
+    const out = p.stdout.toString();
+    expect(out).toContain("Task file:");
+    expect(out).toContain("id: B001");
+    expect(out).toContain("bug-line-13");
+  });
+
+  test("show idea prints file stats and body preview", () => {
+    root = setupFixture();
+    let p = run(["idea", "refactor auth module"], root);
+    expect(p.exitCode).toBe(0);
+
+    const ideasDir = join(root, ".tasks", "ideas");
+    const ideaFiles = readdirSync(ideasDir).filter((name) => name.startsWith("I001-") && name.endsWith(".todo"));
+    expect(ideaFiles.length).toBeGreaterThan(0);
+    const ideaPath = join(ideasDir, ideaFiles[0]!);
+    const raw = readFileSync(ideaPath, "utf8");
+    const parts = raw.split("---\n");
+    const bodyLines = Array.from({ length: 13 }, (_, i) => `idea-line-${String(i + 1).padStart(2, "0")}`);
+    writeFileSync(ideaPath, `---\n${parts[1]}---\n${bodyLines.join("\n")}\n`);
+    const size = statSync(ideaPath).size;
+    const lineCount = readFileSync(ideaPath, "utf8").replace(/\r?\n$/, "").split(/\r?\n/).length;
+
+    p = run(["show", "I001"], root);
+    expect(p.exitCode).toBe(0);
+    const out = p.stdout.toString();
+    expect(out).toContain(`File stats: ${size} bytes, ${lineCount} lines`);
+    expect(out).toContain("Body:");
+    expect(out).toContain("idea-line-12");
+    expect(out).not.toContain("idea-line-13");
+    expect(out).toContain("Instructions:");
   });
 
   test("show missing phase includes tree hint", () => {

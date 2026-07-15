@@ -2579,6 +2579,181 @@ func TestRunShowTaskAllPrintsCompleteTaskFile(t *testing.T) {
 	}
 }
 
+func TestRunShowBugPrintsFileStatsAndBodyPreview(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+	bugPath := filepath.Join(root, ".tasks", "bugs", "bug-task.todo")
+	content := []string{
+		"---",
+		"id: B1",
+		"title: Root bug",
+		"status: pending",
+		"estimate_hours: 1",
+		"complexity: medium",
+		"priority: high",
+		"depends_on: []",
+		"tags: []",
+		"---",
+		"line-01",
+		"line-02",
+		"line-03",
+		"line-04",
+		"line-05",
+		"line-06",
+		"line-07",
+		"line-08",
+		"line-09",
+		"line-10",
+		"line-11",
+		"line-12",
+		"line-13",
+	}
+	if err := os.WriteFile(bugPath, []byte(strings.Join(content, "\n")), 0o644); err != nil {
+		t.Fatalf("write bug file: %v", err)
+	}
+	info, err := os.Stat(bugPath)
+	if err != nil {
+		t.Fatalf("stat bug file: %v", err)
+	}
+
+	output, err := runInDir(t, root, "show", "B1")
+	if err != nil {
+		t.Fatalf("run show B1 = %v, expected nil", err)
+	}
+	if !strings.Contains(output, fmt.Sprintf("File stats: %d bytes, %d lines", info.Size(), len(content))) {
+		t.Fatalf("show output = %q, expected file stats line", output)
+	}
+	if !strings.Contains(output, "line-12") {
+		t.Fatalf("show output = %q, expected preview line-12", output)
+	}
+	if strings.Contains(output, "line-13") {
+		t.Fatalf("show output = %q, expected truncated preview output", output)
+	}
+	if !strings.Contains(output, "... (1 more lines)") {
+		t.Fatalf("show output = %q, expected truncated line count message", output)
+	}
+	if !strings.Contains(output, "To view the full file, run: cat ") {
+		t.Fatalf("show output = %q, expected file preview hint", output)
+	}
+}
+
+func TestRunShowBugLongAndAllFlags(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+	bugPath := filepath.Join(root, ".tasks", "bugs", "bug-task.todo")
+	content := []string{
+		"---",
+		"id: B1",
+		"title: Root bug",
+		"status: pending",
+		"estimate_hours: 1",
+		"complexity: medium",
+		"priority: high",
+		"depends_on: []",
+		"tags: []",
+		"---",
+		"line-01",
+		"line-02",
+		"line-03",
+		"line-04",
+		"line-05",
+		"line-06",
+		"line-07",
+		"line-08",
+		"line-09",
+		"line-10",
+		"line-11",
+		"line-12",
+		"line-13",
+	}
+	if err := os.WriteFile(bugPath, []byte(strings.Join(content, "\n")), 0o644); err != nil {
+		t.Fatalf("write bug file: %v", err)
+	}
+
+	longOut, err := runInDir(t, root, "show", "B1", "--long")
+	if err != nil {
+		t.Fatalf("run show B1 --long = %v", err)
+	}
+	if !strings.Contains(longOut, "line-13") {
+		t.Fatalf("show --long = %q, expected full body", longOut)
+	}
+	if strings.Contains(longOut, "To view the full file, run: cat ") {
+		t.Fatalf("show --long = %q, unexpected preview hint", longOut)
+	}
+
+	allOut, err := runInDir(t, root, "show", "B1", "--all")
+	if err != nil {
+		t.Fatalf("run show B1 --all = %v", err)
+	}
+	if !strings.Contains(allOut, "Task File") {
+		t.Fatalf("show --all = %q, expected Task File header", allOut)
+	}
+	if !strings.Contains(allOut, "id: B1") {
+		t.Fatalf("show --all = %q, expected frontmatter", allOut)
+	}
+	if !strings.Contains(allOut, "line-13") {
+		t.Fatalf("show --all = %q, expected full body", allOut)
+	}
+}
+
+func TestRunShowIdeaPrintsFileStatsAndBodyPreview(t *testing.T) {
+	t.Parallel()
+
+	root := setupListAuxAndScopeFixture(t)
+	ideaPath := filepath.Join(root, ".tasks", "ideas", "idea-task.todo")
+	content := []string{
+		"---",
+		"id: I1",
+		"title: Root idea",
+		"status: pending",
+		"estimate_hours: 1",
+		"complexity: medium",
+		"priority: high",
+		"depends_on: []",
+		"tags: []",
+		"---",
+		"idea-line-01",
+		"idea-line-02",
+		"idea-line-03",
+		"idea-line-04",
+		"idea-line-05",
+		"idea-line-06",
+		"idea-line-07",
+		"idea-line-08",
+		"idea-line-09",
+		"idea-line-10",
+		"idea-line-11",
+		"idea-line-12",
+		"idea-line-13",
+	}
+	if err := os.WriteFile(ideaPath, []byte(strings.Join(content, "\n")), 0o644); err != nil {
+		t.Fatalf("write idea file: %v", err)
+	}
+	info, err := os.Stat(ideaPath)
+	if err != nil {
+		t.Fatalf("stat idea file: %v", err)
+	}
+
+	output, err := runInDir(t, root, "show", "I1")
+	if err != nil {
+		t.Fatalf("run show I1 = %v, expected nil", err)
+	}
+	if !strings.Contains(output, fmt.Sprintf("File stats: %d bytes, %d lines", info.Size(), len(content))) {
+		t.Fatalf("show output = %q, expected file stats line", output)
+	}
+	if !strings.Contains(output, "idea-line-12") {
+		t.Fatalf("show output = %q, expected preview line-12", output)
+	}
+	if strings.Contains(output, "idea-line-13") {
+		t.Fatalf("show output = %q, expected truncated preview", output)
+	}
+	if !strings.Contains(output, "Idea instructions:") {
+		t.Fatalf("show output = %q, expected idea instructions for pending idea", output)
+	}
+}
+
 func TestRunCatSingleTaskPrintsCompleteTaskFile(t *testing.T) {
 	t.Parallel()
 
