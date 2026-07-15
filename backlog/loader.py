@@ -710,17 +710,20 @@ class TaskLoader:
                 benchmark["missing_task_files"] += 1
             frontmatter = {}
 
-        # Merge frontmatter with task_data (frontmatter takes precedence)
-        task_id = frontmatter.get("id", task_data.get("id", ""))
+        # Index-derived ID is the addressable identity. Prefer it over frontmatter
+        # `id` so show/claim still address the task when frontmatter disagrees
+        # (id_path_mismatch warning is emitted when validating the file).
+        task_id = task_data.get("id", "") or frontmatter.get("id", "")
 
         # If task_id doesn't start with the phase prefix, it's incomplete - build the full ID
-        if task_id and not task_id.startswith(f"{epic_path.phase}."):
+        if task_id and not str(task_id).startswith(f"{epic_path.phase}."):
             # Extract just the T### part
-            task_short_id = task_id.split(".")[
+            task_short_id = str(task_id).split(".")[
                 -1
             ]  # Gets T001 from either "T001" or "P1.M2.E3.T001"
             task_path = epic_path.with_task(task_short_id)
             task_id = task_path.full_id
+        task_id = str(task_id) if task_id is not None else ""
 
         title = frontmatter.get("title", task_data.get("title", ""))
         status = frontmatter.get("status", task_data.get("status", "pending"))
@@ -949,6 +952,9 @@ class TaskLoader:
             raise FileNotFoundError(f"Task file not found: {task_file}")
 
         # Update frontmatter fields
+        # Prefer writing the index-derived identity (repairs id_path_mismatch).
+        if task.id:
+            frontmatter["id"] = task.id
         frontmatter["title"] = task.title
         frontmatter["status"] = task.status.value
         frontmatter["estimate_hours"] = task.estimate_hours

@@ -111,11 +111,11 @@
       ],
       "implementation": {
         "cli_assertions": {
-          "go": false,
-          "python": false,
-          "typescript": false
+          "go": true,
+          "python": true,
+          "typescript": true
         },
-        "notes": "T002: keep lookup by index-derived ID and emit the mismatch warning."
+        "notes": "Lookup by index-derived ID; emit Frontmatter ID mismatch warning."
       }
     },
     {
@@ -149,11 +149,11 @@
       ],
       "implementation": {
         "cli_assertions": {
-          "go": false,
-          "python": false,
-          "typescript": false
+          "go": true,
+          "python": true,
+          "typescript": true
         },
-        "notes": "T002: orphan resolution on show; block claim with specified error."
+        "notes": "Orphan resolution on show; block claim with specified error."
       }
     }
   ],

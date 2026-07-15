@@ -3601,6 +3601,10 @@ func saveTaskState(task models.Task, tree models.TaskTree, bodyOverride ...strin
 		return fmt.Errorf("Task file missing for %s: %s", task.ID, taskPath)
 	}
 	printTodoFileWarnings(warnings)
+	// Prefer writing the index-derived identity into frontmatter (repairs mismatch).
+	if strings.TrimSpace(task.ID) != "" {
+		frontmatter["id"] = task.ID
+	}
 	frontmatter["title"] = task.Title
 	frontmatter["status"] = string(task.Status)
 	frontmatter["estimate_hours"] = task.EstimateHours
@@ -4634,6 +4638,273 @@ func findCatNormalTaskByID(taskID string) (*models.Task, error) {
 		ID:   taskID,
 		File: filepath.ToSlash(relativeFile),
 	}, nil
+}
+
+// findOrphanTaskFile locates a resolvable .todo for taskID that is not present in
+// the loaded index/tree. Prefer conventional paths under the hierarchy implied by
+// the ID, then fall back to a data-dir walk matching frontmatter id.
+// Returns a best-effort Task for show rendering, a path string for diagnostics,
+// and ok=true when a file was found.
+func findOrphanTaskFile(dataDir, taskID string) (models.Task, string, bool) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return models.Task{}, "", false
+	}
+
+	// Collect candidate absolute paths.
+	candidates := []string{}
+	seen := map[string]struct{}{}
+	addCandidate := func(abs string) {
+		abs = filepath.Clean(abs)
+		if abs == "" {
+			return
+		}
+		if _, ok := seen[abs]; ok {
+			return
+		}
+		if st, err := os.Stat(abs); err != nil || st.IsDir() {
+			return
+		}
+		seen[abs] = struct{}{}
+		candidates = append(candidates, abs)
+	}
+
+	// 1) Conventional path: resolve epic dir from indexes, then match T00N-*.todo
+	//    or frontmatter id under that epic (and common aux dirs).
+	if scopePath, err := models.ParseTaskPath(taskID); err == nil && scopePath.IsTask() {
+		if epicDir, err := resolveEpicDirFromIndexes(dataDir, scopePath); err == nil && epicDir != "" {
+			short := scopePath.Task
+			entries, _ := os.ReadDir(epicDir)
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				if !strings.HasSuffix(strings.ToLower(name), ".todo") {
+					continue
+				}
+				// Prefer files whose name starts with the short id (T001-...).
+				if short != "" && (strings.HasPrefix(name, short+"-") || strings.HasPrefix(name, short+".")) {
+					addCandidate(filepath.Join(epicDir, name))
+				}
+			}
+			// Also consider any .todo in the epic dir (matched by frontmatter later).
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				name := entry.Name()
+				if strings.HasSuffix(strings.ToLower(name), ".todo") {
+					addCandidate(filepath.Join(epicDir, name))
+				}
+			}
+		}
+	}
+
+	// 2) Full data-dir walk for remaining candidates.
+	_ = filepath.WalkDir(dataDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			base := d.Name()
+			if base == ".git" || base == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasSuffix(strings.ToLower(d.Name()), ".todo") {
+			addCandidate(path)
+		}
+		return nil
+	})
+
+	// Prefer candidates that match by frontmatter id; else name prefix under epic.
+	shortID := ""
+	if scopePath, err := models.ParseTaskPath(taskID); err == nil {
+		shortID = scopePath.Task
+	}
+
+	var best models.Task
+	var bestPath string
+	bestScore := 0
+	for _, abs := range candidates {
+		front, _, warnings, missing, err := readTodoFrontmatter(taskID, abs)
+		_ = warnings
+		if err != nil || missing {
+			// Even without valid frontmatter, accept conventional name match.
+			if shortID != "" {
+				base := filepath.Base(abs)
+				if strings.HasPrefix(base, shortID+"-") || strings.HasPrefix(base, shortID+".") {
+					rel, relErr := filepath.Rel(dataDir, abs)
+					if relErr != nil {
+						continue
+					}
+					score := 1
+					if score > bestScore {
+						bestScore = score
+						bestPath = abs
+						best = models.Task{
+							ID:     taskID,
+							Title:  "",
+							File:   filepath.ToSlash(rel),
+							Status: models.StatusPending,
+						}
+					}
+				}
+			}
+			continue
+		}
+		fmID := strings.TrimSpace(asString(front["id"]))
+		score := 0
+		if fmID != "" && (fmID == taskID || strings.EqualFold(fmID, taskID)) {
+			score = 3
+		} else if shortID != "" {
+			base := filepath.Base(abs)
+			if strings.HasPrefix(base, shortID+"-") || strings.HasPrefix(base, shortID+".") {
+				// Name matches but frontmatter id differs or empty — still an orphan
+				// for this requested ID if frontmatter is empty/malformed-ish.
+				if fmID == "" || fmID == shortID {
+					score = 2
+				}
+			}
+		}
+		if score == 0 {
+			continue
+		}
+		rel, relErr := filepath.Rel(dataDir, abs)
+		if relErr != nil {
+			continue
+		}
+		if score > bestScore {
+			bestScore = score
+			bestPath = abs
+			title := asString(front["title"])
+			status := coerceStatusLocal(front["status"])
+			best = models.Task{
+				ID:            taskID,
+				Title:         title,
+				File:          filepath.ToSlash(rel),
+				Status:        status,
+				EstimateHours: asFloatLocal(front["estimate_hours"], front["estimated_hours"]),
+				Complexity:    coerceComplexityLocal(front["complexity"]),
+				Priority:      coercePriorityLocal(front["priority"]),
+				DependsOn:     asStringSliceLocal(front["depends_on"]),
+				Tags:          asStringSliceLocal(front["tags"]),
+			}
+			if best.Status == "" {
+				best.Status = models.StatusPending
+			}
+			if best.Priority == "" {
+				best.Priority = models.PriorityMedium
+			}
+			if best.Complexity == "" {
+				best.Complexity = models.ComplexityMedium
+			}
+		}
+	}
+	if bestScore == 0 || bestPath == "" {
+		return models.Task{}, "", false
+	}
+	return best, bestPath, true
+}
+
+// resolveEpicDirFromIndexes walks index.yaml hierarchy for the epic that would
+// own the given task path. Returns empty string when hierarchy is incomplete.
+func resolveEpicDirFromIndexes(dataDir string, taskPath models.TaskPath) (string, error) {
+	rootIndex, err := readYAMLMapFile(filepath.Join(dataDir, "index.yaml"))
+	if err != nil {
+		return "", err
+	}
+	phaseEntry, ok := findIndexEntryByID(rootIndex, "phases", taskPath.Phase)
+	if !ok {
+		return "", fmt.Errorf("phase not found")
+	}
+	phaseDir := filepath.Join(dataDir, asString(phaseEntry["path"]))
+	phaseIndex, err := readYAMLMapFile(filepath.Join(phaseDir, "index.yaml"))
+	if err != nil {
+		return "", err
+	}
+	milestoneEntry, ok := findIndexEntryByID(phaseIndex, "milestones", taskPath.MilestoneID(), taskPath.Milestone)
+	if !ok {
+		return "", fmt.Errorf("milestone not found")
+	}
+	milestoneDir := filepath.Join(phaseDir, asString(milestoneEntry["path"]))
+	milestoneIndex, err := readYAMLMapFile(filepath.Join(milestoneDir, "index.yaml"))
+	if err != nil {
+		return "", err
+	}
+	epicEntry, ok := findIndexEntryByID(milestoneIndex, "epics", taskPath.EpicID(), taskPath.Epic)
+	if !ok {
+		return "", fmt.Errorf("epic not found")
+	}
+	return filepath.Join(milestoneDir, asString(epicEntry["path"])), nil
+}
+
+func coerceStatusLocal(raw interface{}) models.Status {
+	value := strings.ToLower(strings.TrimSpace(asString(raw)))
+	if status, err := models.ParseStatus(value); err == nil {
+		return status
+	}
+	if value == "" {
+		return models.StatusPending
+	}
+	return models.Status(value)
+}
+
+func coerceComplexityLocal(raw interface{}) models.Complexity {
+	value := strings.ToLower(strings.TrimSpace(asString(raw)))
+	if value == "" {
+		return models.ComplexityMedium
+	}
+	return models.Complexity(value)
+}
+
+func coercePriorityLocal(raw interface{}) models.Priority {
+	value := strings.ToLower(strings.TrimSpace(asString(raw)))
+	if value == "" {
+		return models.PriorityMedium
+	}
+	return models.Priority(value)
+}
+
+func asFloatLocal(values ...interface{}) float64 {
+	for _, v := range values {
+		switch n := v.(type) {
+		case float64:
+			return n
+		case float32:
+			return float64(n)
+		case int:
+			return float64(n)
+		case int64:
+			return float64(n)
+		case string:
+			if f, err := strconv.ParseFloat(strings.TrimSpace(n), 64); err == nil {
+				return f
+			}
+		}
+	}
+	return 0
+}
+
+func asStringSliceLocal(raw interface{}) []string {
+	switch value := raw.(type) {
+	case []string:
+		return value
+	case []interface{}:
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			if text, ok := item.(string); ok {
+				out = append(out, text)
+			} else if item != nil {
+				out = append(out, fmt.Sprintf("%v", item))
+			}
+		}
+		return out
+	default:
+		return []string{}
+	}
 }
 
 func runCat(args []string) error {
@@ -9026,6 +9297,14 @@ func showScopedItem(
 	case scopePath.IsTask():
 		task := findTask(tree, scopePath.FullID())
 		if task == nil {
+			if orphan, warnPath, ok := findOrphanTaskFile(dataDir, scopePath.FullID()); ok {
+				printTodoFileWarnings([]string{
+					fmt.Sprintf("Task file found but absent from index for %s: %s", scopePath.FullID(), warnPath),
+				})
+				fmt.Printf("%s re-register the file in the epic index (tasks[].file) or run backlog check\n", styleMuted("Next:"))
+				renderTaskDetail(orphan, dataDir, showNext, showLong, showAll, tree)
+				return nil
+			}
 			return showNotFound(tree, "Task", id, scopeHint)
 		}
 		renderTaskDetail(*task, dataDir, showNext, showLong, showAll, tree)
@@ -9476,69 +9755,80 @@ func runClaim(args []string, metadata *gitAutoCommitMetadata) error {
 			return printUsageError(commands.CmdClaim, err)
 		}
 		task := tree.FindTask(id)
-		isPrimaryTask := task != nil
-		if isPrimaryTask {
-			taskFilePath, err := resolveTaskFilePath(task.File)
-			if err != nil {
+		if task == nil {
+			// Prefer findTask for soft ID match parity, then orphan detection.
+			task = findTask(tree, id)
+		}
+		if task == nil {
+			if _, warnPath, ok := findOrphanTaskFile(dataDir, id); ok {
+				printTodoFileWarnings([]string{
+					fmt.Sprintf("Task file found but absent from index for %s: %s", id, warnPath),
+				})
+				fmt.Printf("%s re-register the file in the epic index (tasks[].file) or run backlog check\n", styleMuted("Next:"))
+				return fmt.Errorf("Cannot claim %s because it is not registered in the index.", id)
+			}
+			fmt.Println(styleWarning("Warning: claim only works with task IDs."))
+			fmt.Printf("Showing `backlog show %s` for context.\n", id)
+			if err := runShow([]string{id}, false, false, false); err != nil {
 				return err
-			}
-			_, _, warnings, missing, err := readTodoFrontmatter(task.ID, taskFilePath)
-			if err != nil {
-				return err
-			}
-			printTodoFileWarnings(warnings)
-			if missing {
-				return fmt.Errorf("Cannot claim %s because the task file is missing.", task.ID)
-			}
-			if task.Status == models.StatusDone {
-				return claimDoneError(*task)
-			}
-			if task.ClaimedBy != "" && !force {
-				return fmt.Errorf("Task %s is already claimed by %s", task.ID, task.ClaimedBy)
-			}
-			if task.Status != models.StatusPending {
-				return fmt.Errorf("Cannot claim task %s: task is %s, not pending", task.ID, task.Status)
-			}
-
-			task.Status = models.StatusInProgress
-			task.ClaimedBy = agent
-			now := time.Now().UTC()
-			task.ClaimedAt = &now
-			task.StartedAt = &now
-			task.UpdatedAt = &now
-
-			if err := saveTaskState(*task, tree); err != nil {
-				return err
-			}
-			if metadata.id == "" {
-				metadata.id = task.ID
-				metadata.title = task.Title
-			}
-
-			if !hasContext {
-				if err := taskcontext.SetCurrentTask(dataDir, task.ID, agent); err != nil {
-					return err
-				}
-				hasContext = true
-			}
-
-			if len(taskIDs) == 1 {
-				renderTaskActionCard("✓ Claimed", *task, agent, dataDir, !noContent)
-			} else {
-				fmt.Printf("%s %s - %s\n", styleSuccess("✓ Claimed:"), task.ID, task.Title)
-				if !noContent {
-					for _, detail := range formatTaskDetails(*task) {
-						fmt.Printf("  %s\n", detail)
-					}
-				}
-				printTaskFileReadCommandsForTask(dataDir, *task, !noContent)
 			}
 			continue
 		}
-		fmt.Println(styleWarning("Warning: claim only works with task IDs."))
-		fmt.Printf("Showing `backlog show %s` for context.\n", id)
-		if err := runShow([]string{id}, false, false, false); err != nil {
+
+		taskFilePath, err := resolveTaskFilePath(task.File)
+		if err != nil {
 			return err
+		}
+		_, _, warnings, missing, err := readTodoFrontmatter(task.ID, taskFilePath)
+		if err != nil {
+			return err
+		}
+		printTodoFileWarnings(warnings)
+		if missing {
+			return fmt.Errorf("Cannot claim %s because the task file is missing.", task.ID)
+		}
+		if task.Status == models.StatusDone {
+			return claimDoneError(*task)
+		}
+		if task.ClaimedBy != "" && !force {
+			return fmt.Errorf("Task %s is already claimed by %s", task.ID, task.ClaimedBy)
+		}
+		if task.Status != models.StatusPending {
+			return fmt.Errorf("Cannot claim task %s: task is %s, not pending", task.ID, task.Status)
+		}
+
+		task.Status = models.StatusInProgress
+		task.ClaimedBy = agent
+		now := time.Now().UTC()
+		task.ClaimedAt = &now
+		task.StartedAt = &now
+		task.UpdatedAt = &now
+
+		if err := saveTaskState(*task, tree); err != nil {
+			return err
+		}
+		if metadata.id == "" {
+			metadata.id = task.ID
+			metadata.title = task.Title
+		}
+
+		if !hasContext {
+			if err := taskcontext.SetCurrentTask(dataDir, task.ID, agent); err != nil {
+				return err
+			}
+			hasContext = true
+		}
+
+		if len(taskIDs) == 1 {
+			renderTaskActionCard("✓ Claimed", *task, agent, dataDir, !noContent)
+		} else {
+			fmt.Printf("%s %s - %s\n", styleSuccess("✓ Claimed:"), task.ID, task.Title)
+			if !noContent {
+				for _, detail := range formatTaskDetails(*task) {
+					fmt.Printf("  %s\n", detail)
+				}
+			}
+			printTaskFileReadCommandsForTask(dataDir, *task, !noContent)
 		}
 	}
 	return nil

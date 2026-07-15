@@ -12,7 +12,7 @@ from builtins import next as builtin_next
 from datetime import datetime, timezone
 from rich.console import Console
 
-from .models import PathQuery, Status, TaskPath, Complexity, Priority
+from .models import PathQuery, Status, Task, TaskPath, Complexity, Priority
 from .loader import TaskLoader
 from .critical_path import CriticalPathCalculator
 from .time_utils import utc_now, to_utc
@@ -276,6 +276,209 @@ def _warn_task_file_issues(task) -> bool:
             f"[yellow]Warning:[/] Frontmatter ID mismatch in {task.id}: {file_id}"
         )
     return False
+
+
+def _resolve_epic_dir_from_indexes(data_dir: Path, task_path: TaskPath) -> Path | None:
+    """Resolve the epic directory for a task path via index.yaml hierarchy."""
+    try:
+        root_index = yaml.safe_load((data_dir / "index.yaml").read_text()) or {}
+    except OSError:
+        return None
+    phase_entry = None
+    for entry in root_index.get("phases") or []:
+        if isinstance(entry, dict) and entry.get("id") == task_path.phase:
+            phase_entry = entry
+            break
+    if not phase_entry or not phase_entry.get("path"):
+        return None
+    phase_dir = data_dir / str(phase_entry["path"])
+    try:
+        phase_index = yaml.safe_load((phase_dir / "index.yaml").read_text()) or {}
+    except OSError:
+        return None
+    milestone_entry = None
+    milestone_candidates = {
+        c
+        for c in (task_path.milestone_id, task_path.milestone)
+        if c
+    }
+    for entry in phase_index.get("milestones") or []:
+        if isinstance(entry, dict) and entry.get("id") in milestone_candidates:
+            milestone_entry = entry
+            break
+    if not milestone_entry or not milestone_entry.get("path"):
+        return None
+    milestone_dir = phase_dir / str(milestone_entry["path"])
+    try:
+        milestone_index = yaml.safe_load(
+            (milestone_dir / "index.yaml").read_text()
+        ) or {}
+    except OSError:
+        return None
+    epic_entry = None
+    epic_candidates = {c for c in (task_path.epic_id, task_path.epic) if c}
+    for entry in milestone_index.get("epics") or []:
+        if isinstance(entry, dict) and entry.get("id") in epic_candidates:
+            epic_entry = entry
+            break
+    if not epic_entry or not epic_entry.get("path"):
+        return None
+    return milestone_dir / str(epic_entry["path"])
+
+
+def _parse_todo_metadata(path: Path) -> dict:
+    """Parse frontmatter fields used to build an orphan Task view."""
+    try:
+        content = path.read_text()
+    except OSError:
+        return {}
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    end_index = -1
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end_index = idx
+            break
+    if end_index < 0:
+        return {}
+    try:
+        frontmatter = yaml.safe_load("\n".join(lines[1:end_index])) or {}
+    except Exception:
+        return {}
+    return frontmatter if isinstance(frontmatter, dict) else {}
+
+
+def _find_orphan_task_file(task_id: str):
+    """Locate a resolvable .todo for task_id that is absent from the index.
+
+    Returns (Task, absolute_path) or None.
+    """
+    from .data_dir import get_data_dir
+
+    task_id = (task_id or "").strip()
+    if not task_id:
+        return None
+
+    data_dir = get_data_dir()
+    candidates: list[Path] = []
+    # Note: do not call set() here — cli.py registers a `set` command that
+    # shadows the builtin when this module is fully loaded.
+    seen: dict[str, None] = {}
+
+    def add_candidate(path: Path) -> None:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            resolved = path
+        key = str(resolved)
+        if key in seen:
+            return
+        if not path.is_file():
+            return
+        seen[key] = None
+        candidates.append(path)
+
+    short_id = ""
+    try:
+        task_path = TaskPath.parse(task_id)
+    except ValueError:
+        task_path = None
+    if task_path and task_path.is_task:
+        short_id = task_path.task or ""
+        epic_dir = _resolve_epic_dir_from_indexes(data_dir, task_path)
+        if epic_dir and epic_dir.is_dir():
+            for path in sorted(epic_dir.glob("*.todo")):
+                name = path.name
+                if short_id and (
+                    name.startswith(f"{short_id}-") or name.startswith(f"{short_id}.")
+                ):
+                    add_candidate(path)
+            for path in sorted(epic_dir.glob("*.todo")):
+                add_candidate(path)
+
+    for path in data_dir.rglob("*.todo"):
+        add_candidate(path)
+
+    best = None
+    best_score = 0
+    for path in candidates:
+        fm = _parse_todo_metadata(path)
+        fm_id = str(fm.get("id", "")).strip() if fm else ""
+        score = 0
+        if fm_id and fm_id == task_id:
+            score = 3
+        elif short_id:
+            name = path.name
+            if name.startswith(f"{short_id}-") or name.startswith(f"{short_id}."):
+                if not fm_id or fm_id == short_id:
+                    score = 2
+                elif not fm:
+                    score = 1
+        if score <= best_score:
+            continue
+        try:
+            rel = path.relative_to(data_dir).as_posix()
+        except ValueError:
+            continue
+        best_score = score
+        status_raw = str(fm.get("status", "pending") or "pending")
+        try:
+            status = Status(status_raw)
+        except ValueError:
+            status = Status.PENDING
+        complexity_raw = str(fm.get("complexity", "medium") or "medium")
+        try:
+            complexity = Complexity(complexity_raw)
+        except ValueError:
+            complexity = Complexity.MEDIUM
+        priority_raw = str(fm.get("priority", "medium") or "medium")
+        try:
+            priority = Priority(priority_raw)
+        except ValueError:
+            priority = Priority.MEDIUM
+        estimate = fm.get("estimate_hours", fm.get("estimated_hours", 0.0))
+        try:
+            estimate_hours = float(estimate or 0.0)
+        except (TypeError, ValueError):
+            estimate_hours = 0.0
+        depends_raw = fm.get("depends_on") or []
+        tags_raw = fm.get("tags") or []
+        # Avoid builtins shadowed by cli commands (list/set/next).
+        depends_on = (
+            [x for x in depends_raw]
+            if isinstance(depends_raw, (tuple, type([])))
+            else []
+        )
+        tags = (
+            [x for x in tags_raw]
+            if isinstance(tags_raw, (tuple, type([])))
+            else []
+        )
+        best = (
+            Task(
+                id=task_id,
+                title=str(fm.get("title", "") or ""),
+                file=rel,
+                status=status,
+                estimate_hours=estimate_hours,
+                complexity=complexity,
+                priority=priority,
+                depends_on=depends_on,
+                tags=tags,
+            ),
+            path,
+        )
+    return best
+
+
+def _warn_orphan_absent_from_index(task_id: str, path: Path) -> None:
+    console.print(
+        f"[yellow]Warning:[/] Task file found but absent from index for {task_id}: {path}"
+    )
+    console.print(
+        "[dim]Next:[/] re-register the file in the epic index (tasks[].file) or run backlog check"
+    )
 
 
 SHOW_TASK_PREVIEW_LINES = 12
@@ -2620,6 +2823,14 @@ def show(path_ids, show_long, show_all):
             else:
                 task = scope_tree.find_task(path_id)
                 if not task:
+                    orphan = _find_orphan_task_file(path_id)
+                    if orphan:
+                        orphan_task, orphan_path = orphan
+                        _warn_orphan_absent_from_index(path_id, orphan_path)
+                        _show_orphan_task(
+                            orphan_task, show_long=show_long, show_all=show_all
+                        )
+                        continue
                     _show_not_found("Task", path_id, parent)
                 _show_task(scope_tree, path_id, show_long, show_all)
 
@@ -2853,6 +3064,20 @@ def _show_task(tree, task_id, show_long=False, show_all=False):
     _print_task_file_content(
         task_file_path(task), show_long=show_long, show_all=show_all
     )
+
+
+def _show_orphan_task(task: Task, show_long=False, show_all=False):
+    """Display an orphan task resolved from disk but absent from the index."""
+    console.print(f"\n[bold]Task:[/] {task.id}")
+    console.print(f"[bold]Title:[/] {task.title}")
+    console.print(f"[bold]Status:[/] {task.status.value}")
+    console.print(f"[bold]Estimate:[/] {task.estimate_hours} hours")
+    console.print(f"[bold]Complexity:[/] {task.complexity.value}")
+    console.print(f"[bold]Priority:[/] {task.priority.value}")
+    console.print(f"\n[bold]File:[/] .tasks/{task.file}")
+    task_file = task_file_path(task)
+    if task_file.exists():
+        _print_task_file_content(task_file, show_long=show_long, show_all=show_all)
 
 
 def _show_idea_instructions(idea):
@@ -3362,6 +3587,14 @@ def claim(task_ids, agent, force, no_content):
                 task = tree.find_task(task_id)
 
                 if not task:
+                    orphan = _find_orphan_task_file(task_id)
+                    if orphan:
+                        _, orphan_path = orphan
+                        _warn_orphan_absent_from_index(task_id, orphan_path)
+                        console.print(
+                            f"[red]Error:[/] Cannot claim {task_id} because it is not registered in the index."
+                        )
+                        raise click.Abort()
                     console.print(
                         "[yellow]Warning:[/] claim only works with task IDs."
                     )

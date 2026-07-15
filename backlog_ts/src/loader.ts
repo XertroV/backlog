@@ -581,7 +581,10 @@ export class TaskLoader {
     } else if (benchmark) {
       benchmark.missing_task_files += 1;
     }
-    let id = String(frontmatter.id ?? normalized.id ?? "");
+    // Index-derived ID is the addressable identity. Prefer it over frontmatter
+    // `id` so show/claim still address the task when frontmatter disagrees
+    // (id_path_mismatch warning is emitted when validating the file).
+    let id = String(normalized.id ?? frontmatter.id ?? "");
     if (id && !id.startsWith(`${epPath.phase}.`)) {
       const short = id.split(".").at(-1) ?? "T001";
       id = epPath.withTask(short).fullId;
@@ -715,6 +718,10 @@ export class TaskLoader {
       contentBody = body;
     }
 
+    // Prefer writing the index-derived identity (repairs id_path_mismatch).
+    if (task.id) {
+      frontmatter.id = task.id;
+    }
     frontmatter.title = task.title;
     frontmatter.status = task.status;
     frontmatter.estimate_hours = task.estimateHours;

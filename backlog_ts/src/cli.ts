@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import pc from "picocolors";
-import { dirname, join } from "node:path";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { parse, stringify } from "yaml";
@@ -2290,7 +2290,18 @@ async function cmdShow(args: string[]): Promise<void> {
       continue;
     }
     const t = findTask(scopeTree, id);
-    if (!t) showNotFound("Task", id, scopeHint);
+    if (!t) {
+      const orphan = findOrphanTaskFile(id);
+      if (orphan) {
+        warnOrphanAbsentFromIndex(id, orphan.path);
+        console.log(
+          `${orphan.task.id}: ${orphan.task.title}\nstatus=${orphan.task.status} estimate=${orphan.task.estimateHours}`,
+        );
+        printTaskFileShowContent(orphan.task, showLong, showAll);
+        continue;
+      }
+      showNotFound("Task", id, scopeHint);
+    }
     console.log(`${t.id}: ${t.title}\nstatus=${t.status} estimate=${t.estimateHours}`);
     renderTaskDependencyOverview(t, fullTree ?? scopeTree);
     printTaskFileShowContent(t, showLong, showAll);
@@ -2628,6 +2639,188 @@ function printTodoFileWarnings(warnings: string[]): void {
   }
 }
 
+function warnOrphanAbsentFromIndex(taskId: string, path: string): void {
+  console.log(
+    pc.yellow(`Warning: Task file found but absent from index for ${taskId}: ${path}`),
+  );
+  console.log(
+    pc.dim(
+      "Next: re-register the file in the epic index (tasks[].file) or run backlog check",
+    ),
+  );
+}
+
+function resolveEpicDirFromIndexes(
+  dataDir: string,
+  taskPath: TaskPath,
+): string | undefined {
+  const readIndex = (path: string): Record<string, unknown> | null => {
+    if (!existsSync(path)) return null;
+    try {
+      const raw = parse(readFileSync(path, "utf8"));
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+      return raw as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  };
+  const findEntry = (
+    items: unknown,
+    ids: Array<string | undefined>,
+  ): Record<string, unknown> | undefined => {
+    if (!Array.isArray(items)) return undefined;
+    const wanted = new Set(ids.filter((x): x is string => Boolean(x)));
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const entry = item as Record<string, unknown>;
+      if (wanted.has(String(entry.id ?? ""))) return entry;
+    }
+    return undefined;
+  };
+
+  const root = readIndex(join(dataDir, "index.yaml"));
+  if (!root) return undefined;
+  const phaseEntry = findEntry(root.phases, [taskPath.phase]);
+  if (!phaseEntry?.path) return undefined;
+  const phaseDir = join(dataDir, String(phaseEntry.path));
+  const phaseIndex = readIndex(join(phaseDir, "index.yaml"));
+  if (!phaseIndex) return undefined;
+  const milestoneEntry = findEntry(phaseIndex.milestones, [
+    taskPath.milestoneId,
+    taskPath.milestone,
+  ]);
+  if (!milestoneEntry?.path) return undefined;
+  const milestoneDir = join(phaseDir, String(milestoneEntry.path));
+  const milestoneIndex = readIndex(join(milestoneDir, "index.yaml"));
+  if (!milestoneIndex) return undefined;
+  const epicEntry = findEntry(milestoneIndex.epics, [taskPath.epicId, taskPath.epic]);
+  if (!epicEntry?.path) return undefined;
+  return join(milestoneDir, String(epicEntry.path));
+}
+
+function collectTodoFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    let entries: ReturnType<typeof readdirSync> = [];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === ".git" || entry.name === "node_modules") continue;
+        walk(full);
+      } else if (entry.isFile() && entry.name.endsWith(".todo")) {
+        out.push(full);
+      }
+    }
+  };
+  if (existsSync(root)) walk(root);
+  return out;
+}
+
+function findOrphanTaskFile(
+  taskId: string,
+): { task: Task; path: string } | undefined {
+  const id = taskId.trim();
+  if (!id) return undefined;
+  const dataDir = getDataDirName();
+  const dataRoot = resolve(dataDir);
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  const add = (abs: string): void => {
+    const key = resolve(abs);
+    if (seen.has(key)) return;
+    if (!existsSync(key) || !statSync(key).isFile()) return;
+    seen.add(key);
+    candidates.push(key);
+  };
+
+  let shortId = "";
+  let taskPath: TaskPath | null = null;
+  try {
+    taskPath = TaskPath.parse(id);
+  } catch {
+    taskPath = null;
+  }
+  if (taskPath?.isTask) {
+    shortId = taskPath.task ?? "";
+    const epicDir = resolveEpicDirFromIndexes(dataRoot, taskPath);
+    if (epicDir && existsSync(epicDir)) {
+      for (const file of collectTodoFiles(epicDir)) {
+        const name = file.split(/[\\/]/).pop() ?? "";
+        if (
+          shortId &&
+          (name.startsWith(`${shortId}-`) || name.startsWith(`${shortId}.`))
+        ) {
+          add(file);
+        }
+      }
+      for (const file of collectTodoFiles(epicDir)) add(file);
+    }
+  }
+  for (const file of collectTodoFiles(dataRoot)) add(file);
+
+  let best: { task: Task; path: string } | undefined;
+  let bestScore = 0;
+  for (const abs of candidates) {
+    const { frontmatter } = parseTodoFrontmatter(abs, id);
+    const fmId = String(frontmatter.id ?? "").trim();
+    const base = abs.split(/[\\/]/).pop() ?? "";
+    let score = 0;
+    if (fmId && fmId === id) score = 3;
+    else if (
+      shortId &&
+      (base.startsWith(`${shortId}-`) || base.startsWith(`${shortId}.`))
+    ) {
+      if (!fmId || fmId === shortId) score = 2;
+    }
+    if (score <= bestScore) continue;
+    let rel: string;
+    try {
+      rel = relative(dataRoot, abs).split("\\").join("/");
+    } catch {
+      continue;
+    }
+    bestScore = score;
+    const statusRaw = String(frontmatter.status ?? Status.PENDING);
+    const status = (Object.values(Status) as string[]).includes(statusRaw)
+      ? (statusRaw as Status)
+      : Status.PENDING;
+    const complexityRaw = String(frontmatter.complexity ?? Complexity.MEDIUM);
+    const complexity = (Object.values(Complexity) as string[]).includes(complexityRaw)
+      ? (complexityRaw as Complexity)
+      : Complexity.MEDIUM;
+    const priorityRaw = String(frontmatter.priority ?? Priority.MEDIUM);
+    const priority = (Object.values(Priority) as string[]).includes(priorityRaw)
+      ? (priorityRaw as Priority)
+      : Priority.MEDIUM;
+    best = {
+      path: abs,
+      task: {
+        id,
+        title: String(frontmatter.title ?? ""),
+        file: rel,
+        status,
+        estimateHours: Number(
+          frontmatter.estimate_hours ?? frontmatter.estimated_hours ?? 0,
+        ),
+        complexity,
+        priority,
+        dependsOn: Array.isArray(frontmatter.depends_on)
+          ? (frontmatter.depends_on as string[]).slice()
+          : [],
+        tags: Array.isArray(frontmatter.tags)
+          ? (frontmatter.tags as string[]).slice()
+          : [],
+      },
+    };
+  }
+  return bestScore > 0 ? best : undefined;
+}
+
 function parseTodoFrontmatter(taskPath: string, taskId = ""): TodoFileParseResult {
   if (!existsSync(taskPath)) {
     const warningTarget = taskId || taskPath;
@@ -2920,6 +3113,11 @@ async function cmdClaim(args: string[]): Promise<AutoCommitMetadata> {
   for (const taskId of taskIds) {
     const task = findClaimableTask(tree, taskId);
     if (!task) {
+      const orphan = findOrphanTaskFile(taskId);
+      if (orphan) {
+        warnOrphanAbsentFromIndex(taskId, orphan.path);
+        textError(`Cannot claim ${taskId} because it is not registered in the index.`);
+      }
       console.log(pc.yellow("Warning: claim only works with task IDs."));
       console.log(pc.yellow(`Showing \`backlog show ${taskId}\` for context.`));
       await cmdShow([taskId]);

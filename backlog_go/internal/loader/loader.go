@@ -449,12 +449,17 @@ func (l *Loader) loadTask(raw interface{}, taskRoot string, epPath models.TaskPa
 		}
 	}
 
-	if fmID := asString(front["id"]); fmID != "" {
-		normalizedID, err := normalizeTaskID(fmID, epPath)
-		if err != nil {
-			return models.Task{}, err
+	// Index-derived ID is the addressable identity. Prefer it over frontmatter
+	// `id` so show/claim can still address the task when frontmatter disagrees
+	// (id_path_mismatch warning is emitted when validating the file).
+	if task.ID == "" {
+		if fmID := asString(front["id"]); fmID != "" {
+			normalizedID, err := normalizeTaskID(fmID, epPath)
+			if err != nil {
+				return models.Task{}, err
+			}
+			task.ID = normalizedID
 		}
-		task.ID = normalizedID
 	}
 	if title, has := front["title"]; has {
 		if parsedTitle := asString(title); parsedTitle != "" {

@@ -1,6 +1,6 @@
 # Invalid-file warning contract (show / claim)
 
-**Status:** Contract defined (P2.M1.E1.T001). Full command wiring lands in P2.M1.E1.T002.  
+**Status:** Contract defined (P2.M1.E1.T001). Command wiring complete (P2.M1.E1.T002).  
 **Clients:** Go (`backlog_go`, canonical), Python (`backlog/`), TypeScript (`backlog_ts/`).  
 **Shared fixtures:** [`testdata/invalid-file-diagnostics/`](../../testdata/invalid-file-diagnostics/).
 
@@ -181,8 +181,7 @@ headers so agents address the task consistently).
 4. `backlog claim {INDEX_DERIVED_ID}` once addressing is clear.
 
 **Fixture:** `testdata/invalid-file-diagnostics/cases/id-path-mismatch/`  
-**CLI live parity today:** Partial. Message helper exists; addressing-by-index when
-frontmatter overrides ID is incomplete → **T002 must finish**.
+**CLI live parity today:** Implemented (Go / Python / TypeScript).
 
 ---
 
@@ -241,7 +240,7 @@ Mutation requires index + file linkage so `save` can update both consistently.
 4. `backlog claim {TASK_ID}`.
 
 **Fixture:** `testdata/invalid-file-diagnostics/cases/file-absent-from-index/`  
-**CLI live parity today:** **Not implemented** (today: generic not-found). **T002**.
+**CLI live parity today:** Implemented (Go / Python / TypeScript).
 
 ---
 
@@ -292,13 +291,13 @@ substrings** from [`testdata/invalid-file-diagnostics/expected/messages.json`](.
 
 ## Parity requirements (T002 checklist)
 
-- [ ] Go implements all four conditions in `show` and `claim` per this contract.
-- [ ] Python and TypeScript match Go message substrings and claimability.
-- [ ] Lookup remains by **index-derived ID** for `id_path_mismatch`.
-- [ ] Orphan resolution for `file_absent_from_index` on show; claim blocked with
+- [x] Go implements all four conditions in `show` and `claim` per this contract.
+- [x] Python and TypeScript match Go message substrings and claimability.
+- [x] Lookup remains by **index-derived ID** for `id_path_mismatch`.
+- [x] Orphan resolution for `file_absent_from_index` on show; claim blocked with
       the specified error text.
-- [ ] Focused tests in all three clients pass against the shared fixtures.
-- [ ] Multiple warnings can appear together when applicable (e.g. mismatch + other
+- [x] Focused tests in all three clients pass against the shared fixtures.
+- [x] Multiple warnings can appear together when applicable (e.g. mismatch + other
       non-missing issues).
 
 ## Related commands
