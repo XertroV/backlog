@@ -25,7 +25,7 @@ ideas:
       file: I004-warn-when-an-invalid-file-is-d.todo
       id: I004
       priority: medium
-      status: in_progress
+      status: done
       tags: []
       title: warn when an invalid file is detected. show and claim should do validity checks on the file and print any warnings encountered (eg a file can be valid for claiming but isn't in the index).
     - complexity: medium
