@@ -17,28 +17,28 @@ type invalidFileContract struct {
 	Version    int                        `json:"version"`
 	Conditions []invalidFileConditionSpec `json:"conditions"`
 	Healthy    struct {
-		Fixture                   string   `json:"fixture"`
-		TaskID                    string   `json:"task_id"`
-		MustNotContainSubstrings  []string `json:"must_not_contain_substrings"`
+		Fixture                  string   `json:"fixture"`
+		TaskID                   string   `json:"task_id"`
+		MustNotContainSubstrings []string `json:"must_not_contain_substrings"`
 	} `json:"healthy_control"`
 }
 
 type invalidFileConditionSpec struct {
-	Code               string   `json:"code"`
-	Fixture            string   `json:"fixture"`
-	TaskID             string   `json:"task_id"`
-	WarningSubstrings  []string `json:"warning_substrings"`
-	Show               struct {
+	Code              string   `json:"code"`
+	Fixture           string   `json:"fixture"`
+	TaskID            string   `json:"task_id"`
+	WarningSubstrings []string `json:"warning_substrings"`
+	Show              struct {
 		ExitCode     int      `json:"exit_code"`
 		MustWarn     bool     `json:"must_warn"`
 		MustShowBody bool     `json:"must_show_body"`
 		BodySubs     []string `json:"body_substrings"`
 	} `json:"show"`
 	Claim struct {
-		MayMutate        bool     `json:"may_mutate"`
-		ExitCodeNonzero  bool     `json:"exit_code_nonzero"`
-		ErrorSubstrings  []string `json:"error_substrings"`
-		MustWarnBefore   bool     `json:"must_warn_before_mutate"`
+		MayMutate       bool     `json:"may_mutate"`
+		ExitCodeNonzero bool     `json:"exit_code_nonzero"`
+		ErrorSubstrings []string `json:"error_substrings"`
+		MustWarnBefore  bool     `json:"must_warn_before_mutate"`
 	} `json:"claim"`
 	Recovery       []string `json:"recovery"`
 	Implementation struct {
@@ -164,10 +164,10 @@ func TestInvalidFileContractCatalogAndFixtures(t *testing.T) {
 	contract := loadInvalidFileContract(t)
 
 	requiredCodes := map[string]bool{
-		"missing_indexed_file":    false,
-		"malformed_frontmatter":   false,
-		"id_path_mismatch":        false,
-		"file_absent_from_index":  false,
+		"missing_indexed_file":   false,
+		"malformed_frontmatter":  false,
+		"id_path_mismatch":       false,
+		"file_absent_from_index": false,
 	}
 
 	for _, cond := range contract.Conditions {
