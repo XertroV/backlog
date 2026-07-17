@@ -1,0 +1,14 @@
+---
+complexity: medium
+created_at: "2026-07-17T02:07:04Z"
+depends_on: []
+estimate_hours: 1
+id: B024
+priority: high
+status: pending
+tags: []
+title: bl init should git add .backlog and commit it
+updated_at: "2026-07-17T02:07:04Z"
+---
+
+bl init should git add .backlog and commit it
