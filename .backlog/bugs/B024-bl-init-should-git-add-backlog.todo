@@ -1,18 +1,19 @@
 ---
 claimed_at: "2026-07-17T02:28:46Z"
 claimed_by: cli-user
-completed_at: null
+completed_at: "2026-07-17T02:35:12Z"
 complexity: medium
 created_at: "2026-07-17T02:07:04Z"
 depends_on: []
+duration_minutes: 6.43758670175
 estimate_hours: 1
 id: B024
 priority: high
 started_at: "2026-07-17T02:28:46Z"
-status: in_progress
+status: done
 tags: []
 title: bl init should git add .backlog and commit it
-updated_at: "2026-07-17T02:28:46Z"
+updated_at: "2026-07-17T02:35:12Z"
 ---
 
 bl init should git add .backlog and commit it
