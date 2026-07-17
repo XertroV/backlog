@@ -962,7 +962,7 @@ func Run(rawArgs ...string) error {
 
 	switch command {
 	case commands.CmdInit:
-		return runInit(payload)
+		return runWithAutoCommit("init", payload, runInit)
 	case commands.CmdLog:
 		return runLog(payload)
 	case commands.CmdTree:
@@ -1094,6 +1094,7 @@ const (
 	autoCommitSetPrefix     = "bl set"
 	autoCommitEditPrefix    = "bl edit"
 	autoCommitAppendPrefix  = "bl append"
+	autoCommitInitPrefix    = "bl init"
 )
 
 type gitAutoCommitContext struct {
@@ -1309,6 +1310,8 @@ func autoCommitMessage(command string, metadata gitAutoCommitMetadata) string {
 			return autoCommitEditPrefix
 		}
 		return formatAutoCommitMessage(autoCommitEditPrefix, metadata)
+	case "init":
+		return formatAutoCommitMessage(autoCommitInitPrefix, metadata)
 	default:
 		return fmt.Sprintf("backlog %s", command)
 	}
@@ -1968,7 +1971,7 @@ type initOptions struct {
 	timelineWeeks int
 }
 
-func runInit(args []string) error {
+func runInit(args []string, metadata *gitAutoCommitMetadata) error {
 	if parseFlag(args, "--help", "-h") {
 		printUsageForCommand(commands.CmdInit)
 		return nil
@@ -1979,6 +1982,9 @@ func runInit(args []string) error {
 	}
 	if opts.project == "" {
 		return printUsageError(commands.CmdInit, errors.New("init requires --project"))
+	}
+	if metadata != nil {
+		metadata.title = opts.project
 	}
 
 	if err := ensureBacklogDataAvailable(); err != nil {

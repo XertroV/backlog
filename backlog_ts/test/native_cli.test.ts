@@ -1315,12 +1315,41 @@ describe("native cli", () => {
     expect(p.stdout.toString()).toContain("Consistency check passed");
   });
 
+  test("init auto-commits created .backlog files", () => {
+    root = setupFixture();
+    initializeTestGitRepo(root);
+    const initial = gitCommitCount(root);
+
+    const p = run(["init", "--project", "TypeScript CLI", "--description", "Auto commit checks"], root);
+    expect(p.exitCode).toBe(0);
+    expect(p.stdout.toString()).toContain('Initialized project "TypeScript CLI" in .backlog/');
+    expect(p.stdout.toString()).toContain("✓ Auto-committed: bl init TypeScript CLI");
+    expect(gitCommitCount(root)).toBe(initial + 1);
+    expect(runGit(root, "log", "-1", "--pretty=%B")).toBe("bl init TypeScript CLI");
+    expect(runGit(root, "status", "--short")).toBe("");
+  });
+
   test("init creates .backlog AGENTS.md and CLAUDE.md symlink", () => {
     root = setupFixture();
     const p = run(["init", "--project", "TypeScript CLI", "--description", "Bootstrap checks"], root);
     expect(p.exitCode).toBe(0);
 
     assertBacklogAgentsBootstrap(join(root, ".backlog"));
+  });
+
+  test("init skips auto-commit when staged files already exist", () => {
+    root = setupFixture();
+    initializeTestGitRepo(root);
+    writeFileSync(join(root, "staged-change.txt"), "seed\n");
+    runGit(root, "add", "staged-change.txt");
+    const initial = gitCommitCount(root);
+
+    const p = run(["init", "--project", "TypeScript CLI", "--description", "Auto commit skip"], root);
+    expect(p.exitCode).toBe(0);
+    expect(p.stdout.toString()).toContain('Initialized project "TypeScript CLI" in .backlog/');
+    expect(p.stdout.toString()).not.toContain("Auto-committed");
+    expect(gitCommitCount(root)).toBe(initial);
+    expect(runGit(root, "status", "--short")).toContain("A  staged-change.txt");
   });
 
   test("migrate creates .backlog AGENTS bootstrap and CLAUDE symlink", () => {

@@ -3792,6 +3792,44 @@ def test_benchmark_command_reports_summary(runner, tmp_tasks_dir):
     assert "Parse mode" in text_result.output
 
 
+def test_init_command_auto_commits_when_no_staged_files(runner, tmp_tasks_dir, monkeypatch):
+    """init should auto-commit created .backlog files when no staged files exist."""
+    monkeypatch.chdir(tmp_tasks_dir)
+    initialize_test_git_repo(tmp_tasks_dir)
+    initial_commits = git_commit_count(tmp_tasks_dir)
+
+    result = runner.invoke(
+        cli,
+        ["init", "--project", "Python CLI", "--description", "Auto commit init"],
+    )
+    assert result.exit_code == 0
+    assert 'Initialized project "Python CLI" in .backlog/' in result.output
+    assert "✓ Auto-committed: bl init Python CLI" in result.output
+    assert git_commit_count(tmp_tasks_dir) == initial_commits + 1
+    assert run_git(tmp_tasks_dir, "log", "-1", "--pretty=%B") == "bl init Python CLI"
+    assert run_git(tmp_tasks_dir, "status", "--short") == ""
+
+
+def test_init_command_skips_auto_commit_if_staged_files_exist(runner, tmp_tasks_dir, monkeypatch):
+    """init should skip auto-commit when staged files already exist."""
+    monkeypatch.chdir(tmp_tasks_dir)
+    initialize_test_git_repo(tmp_tasks_dir)
+    (tmp_tasks_dir / "staged-change.txt").write_text("staged\n")
+    run_git(tmp_tasks_dir, "add", "staged-change.txt")
+
+    initial_commits = git_commit_count(tmp_tasks_dir)
+    result = runner.invoke(
+        cli,
+        ["init", "--project", "Python CLI", "--description", "Auto commit skip"],
+    )
+    assert result.exit_code == 0
+    assert 'Initialized project "Python CLI" in .backlog/' in result.output
+    assert "Auto-committed" not in result.output
+
+    assert git_commit_count(tmp_tasks_dir) == initial_commits
+    assert "A  staged-change.txt" in run_git(tmp_tasks_dir, "status", "--short")
+
+
 def test_init_command_creates_backlog_agents_bootstrap(runner, tmp_path, monkeypatch):
     """init should create .backlog/AGENTS.md and a CLAUDE.md symlink."""
     monkeypatch.chdir(tmp_path)

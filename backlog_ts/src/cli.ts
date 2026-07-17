@@ -261,6 +261,10 @@ function autoCommitMessage(command: string, metadata: AutoCommitMetadata | null)
     if (!metadata?.id) return "bl edit";
     return formatAutoCommitMessage("bl edit", metadata);
   }
+  if (command === "init") {
+    if (!metadata) return "bl init";
+    return formatAutoCommitMessage("bl init", metadata);
+  }
   return `backlog ${command}`;
 }
 
@@ -4839,7 +4843,7 @@ async function cmdCheck(args: string[]): Promise<void> {
   }
 }
 
-async function cmdInit(args: string[]): Promise<void> {
+async function cmdInit(args: string[]): Promise<AutoCommitMetadata> {
   const project = parseOpt(args, "--project") ?? parseOpt(args, "-p");
   if (!project) textError("init requires --project");
   const description = parseOpt(args, "--description") ?? parseOpt(args, "-d") ?? "";
@@ -4856,6 +4860,7 @@ async function cmdInit(args: string[]): Promise<void> {
   });
   ensureBacklogAgents(BACKLOG_DIR);
   console.log(`Initialized project "${project}" in ${BACKLOG_DIR}/`);
+  return { id: "", title: project };
 }
 
 async function cmdBug(args: string[]): Promise<AutoCommitMetadata> {
@@ -5086,7 +5091,7 @@ async function main(): Promise<void> {
 
   switch (cmd) {
     case "init":
-      await cmdInit(rest);
+      await runWithAutoCommit("init", () => cmdInit(rest));
       return;
     case "list":
       await cmdList(rest);
