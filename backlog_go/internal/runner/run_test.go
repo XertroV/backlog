@@ -3119,6 +3119,78 @@ func TestRunInitWritesBacklogIndex(t *testing.T) {
 	}
 }
 
+func TestRunInitAutoCommitsCreatedBacklogFiles(t *testing.T) {
+	t.Parallel()
+
+	root := setupAddFixture(t)
+	initializeTestGitRepo(t, root)
+	initialCommits := gitCommitCount(t, root)
+
+	output, err := runInDir(
+		t,
+		root,
+		"init",
+		"--project",
+		"Go Client",
+		"--description",
+		"Auto commit checks",
+	)
+	if err != nil {
+		t.Fatalf("run init = %v, expected nil", err)
+	}
+	if !strings.Contains(output, `Initialized project "Go Client" in .backlog/`) {
+		t.Fatalf("output = %q, expected init success message", output)
+	}
+	if !strings.Contains(output, "✓ Auto-committed: bl init Go Client") {
+		t.Fatalf("output = %q, expected auto-commit success message", output)
+	}
+	if gitCommitCount(t, root) != initialCommits+1 {
+		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), initialCommits+1)
+	}
+	if message := strings.TrimSpace(runGit(t, root, "log", "-1", "--pretty=%B")); message != "bl init Go Client" {
+		t.Fatalf("latest commit = %q, expected %q", message, "bl init Go Client")
+	}
+}
+
+func TestRunInitAutoCommitSkipsWithStagedChanges(t *testing.T) {
+	t.Parallel()
+
+	root := setupAddFixture(t)
+	initializeTestGitRepo(t, root)
+
+	stagedPath := filepath.Join(root, "staged-change.txt")
+	if err := os.WriteFile(stagedPath, []byte("seed\n"), 0o644); err != nil {
+		t.Fatalf("write staged file: %v", err)
+	}
+	runGit(t, root, "add", "staged-change.txt")
+
+	initialCommits := gitCommitCount(t, root)
+	output, err := runInDir(
+		t,
+		root,
+		"init",
+		"--project",
+		"Go Client",
+		"--description",
+		"Auto commit skip",
+	)
+	if err != nil {
+		t.Fatalf("run init = %v, expected nil", err)
+	}
+	if !strings.Contains(output, `Initialized project "Go Client" in .backlog/`) {
+		t.Fatalf("output = %q, expected init success message", output)
+	}
+	if strings.Contains(output, "Auto-committed") {
+		t.Fatalf("output = %q, did not expect auto-commit with staged files", output)
+	}
+	if gitCommitCount(t, root) != initialCommits {
+		t.Fatalf("commit count = %d, expected %d", gitCommitCount(t, root), initialCommits)
+	}
+	if status := runGit(t, root, "status", "--short"); !strings.Contains(status, "A  staged-change.txt") {
+		t.Fatalf("status = %q, expected staged change to be preserved", status)
+	}
+}
+
 func TestRunInitRejectsDuplicateProject(t *testing.T) {
 	t.Parallel()
 

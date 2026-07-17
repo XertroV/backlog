@@ -884,21 +884,29 @@ def init(project, description, timeline_weeks):
     """Initialize a new .backlog project."""
     from .data_dir import _ensure_backlog_agents
 
-    index_path = Path(".backlog/index.yaml")
-    if index_path.exists():
-        raise click.ClickException("Already initialized (.backlog/index.yaml exists)")
+    def _run() -> tuple[str, str] | None:
+        index_path = Path(".backlog/index.yaml")
+        if index_path.exists():
+            raise click.ClickException("Already initialized (.backlog/index.yaml exists)")
 
-    Path(".backlog").mkdir(parents=True, exist_ok=True)
-    data = {
-        "project": project,
-        "description": description,
-        "timeline_weeks": timeline_weeks,
-        "phases": [],
-    }
-    with open(index_path, "w") as f:
-        yaml.dump(data, f, default_flow_style=False)
-    _ensure_backlog_agents(Path(".backlog"))
-    click.echo(f'Initialized project "{project}" in .backlog/')
+        Path(".backlog").mkdir(parents=True, exist_ok=True)
+        data = {
+            "project": project,
+            "description": description,
+            "timeline_weeks": timeline_weeks,
+            "phases": [],
+        }
+        with open(index_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+        _ensure_backlog_agents(Path(".backlog"))
+        click.echo(f'Initialized project "{project}" in .backlog/')
+        return ("", project)
+
+    run_with_auto_commit(
+        "init",
+        _run,
+        warn=lambda msg: console.print(f"[yellow]Warning:[/] {msg}"),
+    )
 
 
 # ============================================================================
